@@ -61,3 +61,6 @@ Make sure to configure your email credentials and LLM API key in `operator.py`.
 
 [MIT License](LICENSE)
 
+## 🙏 Acknowledgments
+
+This project relies on the excellent [browser-use](https://github.com/browser-use/browser-use) library for browser-based autonomous agent execution. We thank the contributors for their work in enabling intelligent automation.
