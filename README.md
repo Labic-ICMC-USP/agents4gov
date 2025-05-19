@@ -49,13 +49,91 @@ agents4gov/
 - Agent selection based on semantic alignment between task and agent description
 - Automated response generation using the user’s original message and execution result
 
-## 🚀 Running the System
+Perfeito! Aqui está uma nova seção **“How to Use”** para o seu `README.md`, clara e objetiva, explicando como rodar o `agents4gov` do zero:
+
+---
+
+## 🚀 How to Use
+
+Follow these steps to run the `agents4gov` system locally:
+
+### 1. Clone the repository
 
 ```bash
-python agents4gov.py
-````
+git clone https://github.com/Labic-ICMC-USP/agents4gov.git
+cd agents4gov
+```
 
-Make sure to configure your email credentials and LLM API key in `operator.py`.
+---
+
+### 2. Install the project (editable mode)
+
+Make sure you have Python 3.11+. Then run:
+
+```bash
+pip install -e .
+```
+
+This installs `agents4gov` and its dependencies in editable mode.
+
+---
+
+### 3. Configure your credentials
+
+Create a file named `config.json` in the project root. Use the following structure:
+
+```json
+{
+  "email": {
+    "pop3_server": "your.pop3.server",
+    "pop3_port": 995,
+    "smtp_server": "your.smtp.server",
+    "smtp_port": 465,
+    "address": "your@email.com",
+    "password": "your-email-password"
+  },
+  "llm": {
+    "api_key": "sk-xxxxx...",
+    "base_url": "https://api.openai.com/v1",
+    "model": "gpt-4o"
+  }
+}
+```
+
+Then create a `.env` file pointing to it:
+
+```env
+AGENTS4GOV_CONFIG=config.json
+```
+
+---
+
+### 4. Install Playwright browser (for the agent)
+
+This is required for the browser automation used by the AI agent.
+
+```bash
+playwright install
+```
+
+---
+
+### 5. Run the agent
+
+Start the system using:
+
+```bash
+python main.py
+```
+
+It will:
+
+* Read emails via POP3
+* Extract user instructions
+* Select the best agent
+* Execute the task
+* Send back a response by email
+
 
 ## 📄 License
 
