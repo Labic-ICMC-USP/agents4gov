@@ -1,8 +1,8 @@
 [project]
-name = "browser-use"
-description = "Make websites accessible for AI agents"
-authors = [{ name = "Gregor Zunic" }]
-version = "0.1.48"
+name = "agents4gov"
+description = "Autonomous LLM agents that read instructions from email and execute tasks for public service automation"
+authors = [{ name = "LABIC - ICMC USP" }]
+version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 classifiers = [
@@ -35,21 +35,11 @@ dependencies = [
     "psutil>=7.0.0",
     "faiss-cpu>=1.9.0",
     "mem0ai==0.1.93",
+    "html2text>=2020.1.16"
 ]
-# pydantic: >2.11 introduces many pydantic deprecation warnings until langchain-core upgrades their pydantic support lets keep it on 2.10
-# google-api-core: only used for Google LLM APIs
-# pyperclip: only used for examples that use copy/paste
-# pyobjc: only used to get screen resolution on macOS
-# screeninfo: only used to get screen resolution on Linux/Windows
-# markdownify: used for page text content extraction for passing to LLM
-# openai: datalib,voice-helpers are actually NOT NEEDED but openai produces noisy errors on exit without them TODO: fix
-# rich: used for terminal formatting and styling in CLI
-# click: used for command-line argument parsing
-# textual: used for terminal UI
 
 [project.optional-dependencies]
 memory = [
-    # sentence-transformers: depends on pytorch, which does not support python 3.13 yet
     "sentence-transformers>=4.0.2",
 ]
 cli = [
@@ -58,19 +48,17 @@ cli = [
     "textual>=3.2.0",
 ]
 examples = [
-    # botocore: only needed for Bedrock Claude boto3 examples/models/bedrock_claude.py
     "botocore>=1.37.23",
 ]
 all = [
-    "browser-use[memory,cli,examples]",
+    "agents4gov[memory,cli,examples]",
 ]
 
 [project.urls]
-Repository = "https://github.com/browser-use/browser-use"
+Repository = "https://github.com/Labic-ICMC-USP/agents4gov"
 
 [project.scripts]
-browseruse = "browser_use.cli:main"
-browser-use = "browser_use.cli:main"
+agents4gov = "main:main"
 
 [tool.codespell]
 ignore-words-list = "bu"
@@ -82,7 +70,7 @@ fix = true
 
 [tool.ruff.lint]
 select = ["ASYNC", "E", "F", "FAST", "I", "PLE"]
-ignore = ["ASYNC109", "E101", "E402", "E501", "F841", "E731"]  # TODO: determine if adding timeouts to all the unbounded async functions is needed / worth-it so we can un-ignore ASYNC109
+ignore = ["ASYNC109", "E101", "E402", "E501", "F841", "E731"]
 unfixable = ["E101", "E402", "E501", "F841", "E731"]
 
 [tool.ruff.format]
@@ -104,6 +92,8 @@ include = [
     "!browser_use/**/tests.py",
     "browser_use/agent/system_prompt.md",
     "browser_use/dom/buildDomTree.js",
+
+    "agents4gov/**/*.py"
 ]
 
 [tool.uv]
