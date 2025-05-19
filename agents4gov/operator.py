@@ -9,8 +9,19 @@ import asyncio
 async def main():
     config = load_config()
 
-    client = POP3Client(**config["email"])
-    smtp = SMTPClient(**config["email"])
+    client = POP3Client(
+        pop3_server=config["email"]["pop3_server"],
+        pop3_port=config["email"]["pop3_port"],
+        address=config["email"]["address"],
+        password=config["email"]["password"]
+    )
+
+    smtp = SMTPClient(
+        smtp_server=config["email"]["smtp_server"],
+        smtp_port=config["email"]["smtp_port"],
+        address=config["email"]["address"],
+        password=config["email"]["password"]
+    )
 
     llm_extractor = LLMClient(system_prompt=EmailTaskExtractor.SYSTEM_PROMPT, **config["llm"])
     llm_responder = LLMClient(system_prompt=EmailResponseLLM.SYSTEM_PROMPT, **config["llm"])

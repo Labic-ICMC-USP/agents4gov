@@ -1,6 +1,7 @@
 from browser_use import Agent
 from langchain_openai import ChatOpenAI
 from typing import List, Dict, Optional
+import os
 
 class TaskExecutorAgent:
     def __init__(self, api_key: str, model: str = "gpt-4o"):
@@ -18,7 +19,7 @@ class TaskExecutorAgent:
             return None
 
         prompt = "Execute the following tasks:\n" + "\n".join(f"- {t}" for t in task_list)
-
+        os.environ["OPENAI_API_KEY"] = self.api_key
         agent = Agent(
             task=prompt,
             llm=ChatOpenAI(
