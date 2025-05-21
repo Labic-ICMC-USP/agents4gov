@@ -1,0 +1,12 @@
+{
+  "task": "Você é um agente de automação que deve acessar um site de notícias (como https://news.google.com.br), buscar por um tema específico (ex.: 'XXXX'), identificar eventos relevantes e gerar um relatório de análise de risco. A tarefa inclui: (1) buscar notícias dos últimos 3 meses, (2) selecionar as 10 mais severas, (3) extrair informações usando 5W1H (What, Who, Where, When, Why, How), (4) organizar os eventos em um relatório contendo título, período da análise, resumo e lista de riscos, (5) classificar a severidade dos eventos identificados. Substitua o termo 'XXXX' pelo tema de interesse antes de executar.",
+  "message_context": "",
+  "execution_model": "openrouter/YOUR_EXECUTION_MODEL",
+  "execution_api_key": "sk-your-execution-api-key",
+  "execution_base_url": "https://openrouter.ai/api/v1",
+  "planning_model": "openrouter/YOUR_PLANNING_MODEL",
+  "planning_api_key": "sk-your-planning-api-key",
+  "planning_base_url": "https://openrouter.ai/api/v1",
+  "planner_interval": 2,
+  "output_directory": "results"
+}
