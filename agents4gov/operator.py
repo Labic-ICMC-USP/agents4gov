@@ -1,5 +1,5 @@
 from .config import load_config
-from .client_email import POP3Client, SMTPClient
+from .client_email import SMTPClient,IMAP4Client
 from .llm_client import LLMClient
 from .extractor import EmailTaskExtractor
 from .executor import TaskExecutorAgent
@@ -9,13 +9,18 @@ import asyncio
 async def main():
     config = load_config()
 
-    client = POP3Client(
-        pop3_server=config["email"]["pop3_server"],
-        pop3_port=config["email"]["pop3_port"],
+    # client = POP3Client(
+    #     pop3_server=config["email"]["pop3_server"],
+    #     pop3_port=config["email"]["pop3_port"],
+    #     address=config["email"]["address"],
+    #     password=config["email"]["password"]
+    # )
+    client = IMAP4Client(
+        imap4_server=config["email"]["imap4_server"],
+        imap4_port=config["email"]["imap4_port"],
         address=config["email"]["address"],
         password=config["email"]["password"]
     )
-
     smtp = SMTPClient(
         smtp_server=config["email"]["smtp_server"],
         smtp_port=config["email"]["smtp_port"],

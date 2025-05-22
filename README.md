@@ -4,7 +4,7 @@
 
 ## 🔁 Workflow
 
-1. Connects to an email inbox via POP3.
+1. Connects to an email inbox via IMAP4.
 2. Analyzes each email to detect clear instructions or requests.
 3. Uses an LLM to extract the task, category, and description.
 4. Selects the most appropriate agent based on available descriptions (fallback: general-purpose agent).
@@ -25,7 +25,7 @@ agents4gov/
 │
 ├── agents4gov.py              # Main operator controlling the flow
 ├── llm\_client.py            # Generic LLM client interface
-├── email\_pop3.py            # Email receiver (POP3)
+├── email\_imap4.py            # Email receiver (IMAP)
 ├── email\_smtp.py            # Email sender (SMTP)
 ├── extractor.py             # Task extraction via LLM
 ├── responder.py             # User response generator
@@ -85,8 +85,8 @@ Create a file named `config.json` in the project root. Use the following structu
 ```json
 {
   "email": {
-    "pop3_server": "your.pop3.server",
-    "pop3_port": 995,
+    "imap4_server": "your.imap4.server",
+    "imap4_port": 993,
     "smtp_server": "your.smtp.server",
     "smtp_port": 465,
     "address": "your@email.com",
@@ -128,7 +128,7 @@ python main.py
 
 It will:
 
-* Read emails via POP3
+* Read emails via IMAP4
 * Extract user instructions
 * Select the best agent
 * Execute the task

@@ -1,4 +1,5 @@
 import poplib
+import imaplib
 import html2text
 from email.parser import BytesParser
 from email.policy import default
@@ -10,42 +11,47 @@ import smtplib
 from email.message import EmailMessage as MIMEMessage
 from datetime import datetime
 
-class POP3Client:
-    def __init__(self, pop3_server: str, pop3_port: int, address: str, password: str):
-        self.server = pop3_server
-        self.port = pop3_port
+
+class IMAP4Client:
+    def __init__(self, imap4_server: str, imap4_port: int, address: str, password: str):
+        self.server = imap4_server
+        self.port = imap4_port
         self.user = address
         self.password = password
         self.seen_ids = set()
 
     def _connect(self):
-        conn = poplib.POP3_SSL(self.server, self.port)
-        conn.user(self.user)
-        conn.pass_(self.password)
+        conn = imaplib.IMAP4_SSL(self.server, self.port)
+        conn.login(self.user, self.password)
         return conn
 
     def list_messages(self) -> List[dict]:
         messages = []
         conn = self._connect()
+        conn.select("inbox")
+        status, data = conn.uid('search', None, "UNSEEN")
+        email_ids = data[0].split()
+        print(email_ids)
         try:
-            num_messages = len(conn.list()[1])
-            for i in range(num_messages, 0, -1):
-                resp, lines, octets = conn.retr(i)
-                msg_bytes = b"\r\n".join(lines)
+            for i in reversed(email_ids):
+                email_id = i.decode()
+                resp, data = conn.uid('fetch', email_id, "(RFC822)")
+                msg_bytes = data[0][1]
                 msg = BytesParser(policy=default).parsebytes(msg_bytes)
                 subject = msg["subject"] or "(no subject)"
-                uid = f"{i}-{subject}".strip()
+                uid = f"{email_id}-{subject}".strip()
                 if uid not in self.seen_ids:
-                    messages.append({"index": i, "id": uid, "subject": subject, "from": msg["from"]})
+                    messages.append({"index": email_id, "id": uid, "subject": subject, "from": msg["from"]})
         finally:
-            conn.quit()
+            conn.logout()
         return messages
 
     def get_message_by_index(self, index: int) -> Optional[EmailMessage]:
         conn = self._connect()
+        conn.select("inbox")
         try:
-            resp, lines, octets = conn.retr(index)
-            msg_bytes = b"\r\n".join(lines)
+            resp, lines = conn.uid('fetch',index, "(RFC822)")
+            msg_bytes = lines[0][1]
             msg = BytesParser(policy=default).parsebytes(msg_bytes)
 
             subject = msg["subject"] or "(no subject)"
@@ -77,14 +83,18 @@ class POP3Client:
                     html_content = msg.get_content()
 
             if not content and html_content:
-                content = html2text.html2text(html_content)
+                content = "content"
 
             uid = f"{index}-{subject}".strip()
             self.seen_ids.add(uid)
 
             return EmailMessage(timestamp, sender, recipient, subject, content.strip(), attachments)
         finally:
-            conn.quit()
+            conn.logout()
+
+
+
+
 
 class SMTPClient:
     def __init__(self, smtp_server: str, smtp_port: int, address: str, password: str):
