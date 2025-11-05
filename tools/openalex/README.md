@@ -1,10 +1,4 @@
-# Agents4Gov Tools
-
-This directory contains all tool implementations for the Agents4Gov project. Each tool is designed to be imported and used within Open WebUI to provide specific functionality to LLM agents.
-
-## Available Tools
-
-### 1. OpenAlex DOI Metadata Retrieval
+# OpenAlex DOI Metadata Retrieval
 
 **File:** `open_alex_doi.py`
 
