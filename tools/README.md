@@ -7,6 +7,11 @@ This directory contains tools that can be used by agents in the Agents4Gov frame
 ### OpenAlex
 - **[openalex/open_alex_doi.py](openalex/README.md)** - Retrieves metadata and impact indicators for scientific publications using DOI
 
+### OpenML
+- **[openml/openml_search.py](openml/README.md)** - Search for machine learning datasets using semantic similarity with embeddings
+- **[openml/openml_download.py](openml/README.md)** - Download datasets from OpenML by ID and save as CSV
+- **[openml/openml_knn_train.py](openml/README.md)** - Train KNN models with hyperparameter tuning via cross-validation
+
 ## How to Use Tools in Open WebUI
 
 ### Method 1: Import via UI
