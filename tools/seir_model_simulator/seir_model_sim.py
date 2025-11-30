@@ -11,7 +11,7 @@ class Tools:
     Agents4Gov tool implementing a deterministic SEIR (Susceptible–Exposed–Infectious–Recovered)
     epidemiological simulator suitable for Open WebUI tool execution.
 
-    The public `run_seir_simulation` method validates inputs, integrates the SEIR system,
+    The public run_seir_simulation method validates inputs, integrates the SEIR system,
     computes interpretable metrics, and returns structured JSON with complete time-series
     data for external visualization.
     """
@@ -226,7 +226,7 @@ class Tools:
             description="Maximum number of time points in output arrays (higher values increase detail but reduce performance).",
         ),
     ) -> str:
-        """
+        r"""
         Run a Susceptible–Exposed–Infectious–Recovered (SEIR) simulation.
         
         Returns a JSON string containing:
