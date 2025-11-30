@@ -25,6 +25,7 @@ Agents4Gov/
 ## Available Documentation
 
 - **[How to Create a Tool](how_to_create_tool.md)** - A comprehensive step-by-step guide for creating custom tools that can be used by agents. Learn about tool structure, parameter validation, error handling, and best practices. Reference implementation: `tools/open_alex_doi.py`
+- **[SEIR Model Simulator Tool Guide](../tools/seir_model_simulator/README.md)** - Detailed description of the SEIR simulation parameters, outputs, and integration guidelines.
 
 ## External Resources
 
