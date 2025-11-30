@@ -9,6 +9,7 @@ __pycache__/
 # Development artifacts
 iterations_report/
 temp/
+local_tests/
 
 # OS files
 .DS_Store
