@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import numpy as np
 from pydantic import Field
@@ -81,7 +81,7 @@ class Tools:
             ),
         }
 
-    def _build_time_grid(self, simulation_days: int, requested_step: float) -> Tuple[np.ndarray, float]:
+    def _build_time_grid(self, simulation_days: int, requested_step: float):
         """
         Construct time evaluation grid with automatic coarsening for performance.
 
@@ -107,14 +107,14 @@ class Tools:
     def _seir_derivatives(
         self,
         t: float,
-        y: np.ndarray,
+        y,
         population: float,
         beta: float,
         sigma: float,
         gamma: float,
         intervention_day: Optional[int],
         intervention_effect: float,
-    ) -> Tuple[float, float, float, float]:
+    ):
         """
         Compute SEIR model derivatives (right-hand side of ODEs).
 
