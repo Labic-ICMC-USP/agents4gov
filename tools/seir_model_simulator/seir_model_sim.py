@@ -1,5 +1,3 @@
-import base64
-import io
 import json
 from typing import Any, Dict, Optional, Tuple
 
@@ -14,8 +12,8 @@ class Tools:
     epidemiological simulator suitable for Open WebUI tool execution.
 
     The public `run_seir_simulation` method validates inputs, integrates the SEIR system,
-    computes interpretable metrics, and returns structured JSON (optionally with a
-    base64-encoded PNG visualization of the compartment curves).
+    computes interpretable metrics, and returns structured JSON with complete time-series
+    data for external visualization.
     """
 
     def __init__(self, max_time_points: int = 1000) -> None:
@@ -160,48 +158,6 @@ class Tools:
 
         return d_susceptible, d_exposed, d_infected, d_recovered
 
-    def _generate_plot(
-        self,
-        time_points: np.ndarray,
-        susceptible: np.ndarray,
-        exposed: np.ndarray,
-        infected: np.ndarray,
-        recovered: np.ndarray,
-    ) -> str:
-        """
-        Generate base64-encoded PNG plot of SEIR compartment curves.
-
-        Args:
-            time_points: Time grid in days
-            susceptible: S compartment time series
-            exposed: E compartment time series
-            infected: I compartment time series
-            recovered: R compartment time series
-
-        Returns:
-            Base64-encoded PNG image as ASCII string
-        """
-        import matplotlib.pyplot as plt  # Lazy import for optional plotting
-
-        fig, ax = plt.subplots(figsize=(8, 4.5))
-        ax.plot(time_points, susceptible, label="Susceptible", color="#1f77b4")
-        ax.plot(time_points, exposed, label="Exposed", color="#ff7f0e")
-        ax.plot(time_points, infected, label="Infected", color="#d62728")
-        ax.plot(time_points, recovered, label="Recovered", color="#2ca02c")
-        ax.set_xlabel("Days")
-        ax.set_ylabel("Individuals")
-        ax.set_title("SEIR Model Simulation")
-        ax.legend()
-        ax.grid(alpha=0.3)
-
-        buffer = io.BytesIO()
-        fig.tight_layout()
-        fig.savefig(buffer, format="png", dpi=150)
-        plt.close(fig)
-
-        buffer.seek(0)
-        return base64.b64encode(buffer.read()).decode("ascii")
-
     def run_seir_simulation(
         self,
         total_population: int = Field(
@@ -263,10 +219,6 @@ class Tools:
             ge=0,
             description="Threshold (individual count) used to estimate when infections fall below a critical level.",
         ),
-        generate_plot: bool = Field(
-            default=False,
-            description="If true, return a base64-encoded PNG plot of the SEIR curves.",
-        ),
         max_output_points: int = Field(
             default=1000,
             ge=10,
@@ -274,8 +226,38 @@ class Tools:
             description="Maximum number of time points in output arrays (higher values increase detail but reduce performance).",
         ),
     ) -> str:
-        """Run a Susceptible–Exposed–Infectious–Recovered (SEIR) simulation."""
-
+        """
+        Run a Susceptible–Exposed–Infectious–Recovered (SEIR) simulation.
+        
+        Returns a JSON string containing:
+        - Complete time-series data for S, E, I, R compartments
+        - Key epidemiological metrics (R₀, peak infections, attack rate)
+        - Population conservation validation
+        - Human-readable summary
+        
+        Args:
+            total_population: Total population size N
+            initial_infected: Initial infectious individuals I₀
+            initial_exposed: Initial exposed individuals E₀
+            initial_recovered: Initial recovered/immune individuals R₀
+            transmission_rate: Transmission rate β
+            incubation_rate: Incubation rate σ (1/latent period)
+            recovery_rate: Recovery rate γ (1/infectious period)
+            simulation_days: Duration of simulation in days
+            time_step: Desired time step resolution
+            intervention_day: Day when intervention starts (None = no intervention)
+            intervention_effect: Multiplier for β after intervention
+            infection_threshold: Threshold for tracking infection decline
+            max_output_points: Maximum time points in output (10-10,000)
+            
+        Returns:
+            JSON string with simulation results and metrics
+        """
+        
+        # ========================================
+        # PARAMETER VALIDATION
+        # ========================================
+        
         try:
             parsed = self._validate_parameters(
                 total_population=total_population,
@@ -298,6 +280,10 @@ class Tools:
                 "message": str(exc),
             }
             return json.dumps(error_result, ensure_ascii=False, indent=2)
+        
+        # ========================================
+        # TIME GRID CONSTRUCTION
+        # ========================================
 
         # Override max_time_points if specified by user
         original_max = self.max_time_points
@@ -307,6 +293,10 @@ class Tools:
         
         y0 = parsed["initial_conditions"]
         population = parsed["total_population"]
+        
+        # ========================================
+        # NUMERICAL INTEGRATION
+        # ========================================
 
         try:
             solution = solve_ivp(
@@ -343,6 +333,10 @@ class Tools:
                 "message": solution.message,
             }
             return json.dumps(error_result, ensure_ascii=False, indent=2)
+        
+        # ========================================
+        # POST-PROCESSING AND METRICS EXTRACTION
+        # ========================================
 
         susceptible, exposed, infected, recovered = solution.y
         susceptible = np.clip(susceptible, 0, population)
@@ -384,6 +378,10 @@ class Tools:
             summary_parts.append(
                 f"Infections do not drop below {infection_threshold} individuals within the simulated period."
             )
+        
+        # ========================================
+        # BUILD STRUCTURED RESPONSE
+        # ========================================
 
         result: Dict[str, Any] = {
             "status": "success",
@@ -427,22 +425,6 @@ class Tools:
             },
             "summary": " ".join(summary_parts),
         }
-
-        if generate_plot:
-            try:
-                encoded_plot = self._generate_plot(time_points, susceptible, exposed, infected, recovered)
-                result["plot"] = {
-                    "format": "png",
-                    "encoding": "base64",
-                    "data": encoded_plot,
-                    "description": "SEIR curves for susceptible, exposed, infected, and recovered populations.",
-                }
-            except Exception as exc:
-                result["plot"] = {
-                    "format": None,
-                    "encoding": None,
-                    "data": None,
-                    "error": f"Failed to generate plot: {exc}",
-                }
-
+        
+        # Return as formatted JSON string
         return json.dumps(result, ensure_ascii=False, indent=2)
