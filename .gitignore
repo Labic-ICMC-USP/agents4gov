@@ -1,3 +1,14 @@
 .venv/
 .webui_secret_key
 datasets/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Development artifacts
+iterations_report/
+temp/
+
+# OS files
+.DS_Store
