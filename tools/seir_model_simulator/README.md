@@ -1,6 +1,6 @@
 # SEIR Model Simulator Tool
 
-**File:** `main.py`
+**File:** `seir_model_sim.py`
 
 **Description:** Runs a configurable Susceptible–Exposed–Infectious–Recovered (SEIR) epidemiological simulation and returns structured analytics for policy scenario exploration within Open WebUI.
 
