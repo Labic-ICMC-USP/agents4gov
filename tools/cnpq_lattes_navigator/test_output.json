@@ -1,0 +1,92 @@
+{
+  "status": "success",
+  "execution_metadata": {
+    "execution_date": "2025-11-13T21:19:48.443242",
+    "time_window_years": 5,
+    "cutoff_date": "2020-11-14T21:19:48.443174",
+    "num_researchers": 2,
+    "coi_rules_active": {
+      "R1": true,
+      "R2": true,
+      "R3": true,
+      "R4": true,
+      "R5": true,
+      "R6": true,
+      "R7": true
+    }
+  },
+  "researchers": [
+    {
+      "person": {
+        "name": "Ana Silva Santos",
+        "lattes_id": "1234567890123456",
+        "profile_url": "http://lattes.cnpq.br/1234567890123456",
+        "last_update": null
+      },
+      "production_5y": {
+        "publications": {
+          "total": 0,
+          "by_type": {},
+          "top_items": []
+        },
+        "projects": {
+          "total": 0,
+          "active": [],
+          "concluded": []
+        },
+        "advising": {
+          "total": 0,
+          "ongoing": [],
+          "concluded": []
+        },
+        "activities": []
+      },
+      "affiliations_5y": [],
+      "coauthors_5y": [],
+      "warnings": [
+        "browser-use library not installed - using mock data. Install with: pip install browser-use"
+      ],
+      "evidence_urls": [
+        "http://lattes.cnpq.br/1234567890123456"
+      ]
+    },
+    {
+      "person": {
+        "name": "Carlos Oliveira Lima",
+        "lattes_id": "2345678901234567",
+        "profile_url": "http://lattes.cnpq.br/2345678901234567",
+        "last_update": null
+      },
+      "production_5y": {
+        "publications": {
+          "total": 0,
+          "by_type": {},
+          "top_items": []
+        },
+        "projects": {
+          "total": 0,
+          "active": [],
+          "concluded": []
+        },
+        "advising": {
+          "total": 0,
+          "ongoing": [],
+          "concluded": []
+        },
+        "activities": []
+      },
+      "affiliations_5y": [],
+      "coauthors_5y": [],
+      "warnings": [
+        "browser-use library not installed - using mock data. Install with: pip install browser-use"
+      ],
+      "evidence_urls": [
+        "http://lattes.cnpq.br/2345678901234567"
+      ]
+    }
+  ],
+  "coi_matrix": {
+    "pairs": []
+  },
+  "summary_text": "Analysis of 2 researchers over the last 5 years. No conflicts of interest detected."
+}

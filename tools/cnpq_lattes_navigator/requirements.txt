@@ -1,6 +1,6 @@
-requests
-pydantic
-open-webui
 browser-use
 playwright
+requests
+pydantic
 python-dateutil
+
