@@ -12,6 +12,9 @@ This directory contains tools that can be used by agents in the Agents4Gov frame
 - **[openml/openml_download.py](openml/README.md)** - Download datasets from OpenML by ID and save as CSV
 - **[openml/openml_knn_train.py](openml/README.md)** - Train KNN models with hyperparameter tuning via cross-validation
 
+### SEIR Model Simulator
+- **[seir_model_simulator/main.py](seir_model_simulator/README.md)** - Run configurable SEIR epidemiological simulations with exposed compartments, key metrics, summarized time series, and optional plots
+
 ## How to Use Tools in Open WebUI
 
 ### Method 1: Import via UI
