@@ -90,7 +90,6 @@ For more realistic scenarios, consider extensions like age-structured models, sp
 | `intervention_day` (int, optional) | Day when β is multiplied by `intervention_effect`. `None` disables intervention. |
 | `intervention_effect` (float, default `1.0`) | Multiplier applied to β after `intervention_day` (e.g., `0.6` reduces transmission by 40%). |
 | `infection_threshold` (float, default `1.0`) | Threshold used to estimate when infections drop below a critical value. |
-| `generate_plot` (bool, default `False`) | When `True`, returns a base64 PNG plot of S, E, I, R curves. |
 | `max_output_points` (int, default `1000`) | Maximum time points in output arrays (range: 10-10,000). Higher values increase detail but may reduce performance. |
 
 ## Output Structure
@@ -101,9 +100,8 @@ The tool returns a JSON-formatted string containing:
 - `parameters`: Echoed inputs plus effective time-step applied
 - `metrics`: Peak infections, recovered totals, threshold crossing, **R₀ approximation** (β/γ), and **attack rate**
 - `validation`: Population conservation check and maximum deviation from total population
-- `time_series`: Arrays for `time`, `susceptible`, `exposed`, `infected`, `recovered`
+- `time_series`: Complete arrays for `time`, `susceptible`, `exposed`, `infected`, `recovered` (ready for external visualization)
 - `summary`: Human-readable interpretation of the scenario
-- `plot` *(optional)*: Base64-encoded PNG if `generate_plot=True`
 
 Example snippet:
 
@@ -126,9 +124,55 @@ Example snippet:
 }
 ```
 
+## Visualizing Results
+
+**Note:** This tool runs in the browser (Pyodide) and does not include plotting capabilities. Instead, it returns complete time-series data in JSON format for external visualization.
+
+### Creating Plots Locally
+
+After running a simulation in Open WebUI, copy the JSON output and visualize it using matplotlib:
+
+```python
+import json
+import matplotlib.pyplot as plt
+
+# Load results from Open WebUI
+data = json.loads('''<paste JSON output here>''')
+ts = data['time_series']
+
+# Create SEIR plot
+plt.figure(figsize=(10, 6))
+plt.plot(ts['time'], ts['susceptible'], label='Susceptible', color='#1f77b4')
+plt.plot(ts['time'], ts['exposed'], label='Exposed', color='#ff7f0e')
+plt.plot(ts['time'], ts['infected'], label='Infected', color='#d62728')
+plt.plot(ts['time'], ts['recovered'], label='Recovered', color='#2ca02c')
+
+# Mark peak
+peak_day = data['metrics']['peak_day']
+peak_infected = data['metrics']['peak_infected']
+plt.axvline(peak_day, color='red', linestyle='--', alpha=0.5, 
+            label=f'Peak (day {peak_day:.0f})')
+plt.scatter([peak_day], [peak_infected], color='red', s=100, zorder=5)
+
+plt.xlabel('Days')
+plt.ylabel('Population')
+plt.title(f"SEIR Simulation (R₀ = {data['metrics']['r0_approximation']:.2f})")
+plt.legend()
+plt.grid(alpha=0.3)
+plt.savefig('seir_results.png', dpi=150)
+plt.show()
+```
+
+### Why External Visualization?
+
+- **Browser Compatibility:** Pyodide (browser Python) has limited support for visualization libraries
+- **Flexibility:** Use any plotting library (matplotlib, plotly, seaborn, R, Excel, etc.)
+- **Performance:** Lighter tool execution in the browser
+- **Customization:** Full control over plot styling and multi-panel layouts
+
 ## Usage
 
-1. Import `tools/seir_model_simulator/main.py` as a tool inside Open WebUI.
+1. Import `tools/seir_model_simulator/seir_model_sim.py` as a tool inside Open WebUI.
 2. Invoke via chat, e.g.:
    ```
    Run a SEIR simulation with N=1000000, E0=25, I0=10, beta=0.3, sigma=0.2, gamma=0.1 for 200 days and show the plot.
@@ -140,7 +184,7 @@ Example snippet:
 - Python 3.11+
 - `numpy`
 - `scipy`
-- `matplotlib` (only needed if `generate_plot` is enabled but listed for completeness)
+- `matplotlib` (only needed if `generate_plot` is enabled)
 
 Install dependencies for this tool:
 
@@ -154,4 +198,4 @@ pip install -r tools/seir_model_simulator/requirements.txt
 - Time grids longer than 1,000 points are compressed to maintain responsive UIs.
 - All compartment arrays are clipped to `[0, N]` to limit numerical drift.
 
-For architecture guidance or to extend toward SEAIR/SEIRS variants, consult `docs/how_to_create_tool.md`.
+For architecture guidance, consult `docs/how_to_create_tool.md`.
