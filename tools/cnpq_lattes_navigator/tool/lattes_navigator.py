@@ -8,12 +8,14 @@ from typing import List, Dict, Any, Optional, Tuple
 from collections import defaultdict
 from pydantic import Field
 
+BROWSER_USE_AVAILABLE = False
+BROWSER_IMPORT_ERROR = None
+
 try:
-    from browser_use import Agent, Browser, BrowserConfig
-    from langchain_openai import ChatOpenAI
+    from browser_use import Agent, ChatOpenAI
     BROWSER_USE_AVAILABLE = True
-except ImportError:
-    BROWSER_USE_AVAILABLE = False
+except Exception as e:
+    BROWSER_IMPORT_ERROR = str(e)
 
 
 class Tools:
@@ -34,7 +36,6 @@ class Tools:
             description='JSON to enable/disable COI rules'
         )
     ) -> str:
-        """Analyze researchers for Conflicts of Interest and summarize production."""
         try:
             researchers = json.loads(researchers_json)
             coi_config = json.loads(coi_rules_config)
@@ -157,8 +158,7 @@ class Tools:
         cutoff_year = cutoff_date.year
         current_year = datetime.now().year
         
-        browser = Browser(config=BrowserConfig(headless=True, disable_security=True))
-        llm = ChatOpenAI(model=self.openai_model, api_key=self.openai_api_key, temperature=0)
+        llm = ChatOpenAI(model=self.openai_model)
         
         task = f"""
 Navigate to {profile_url} and extract data for "{name}" (years {cutoff_year}-{current_year}):
@@ -174,7 +174,7 @@ Return JSON:
 {{"last_update": "...", "affiliations": [...], "publications": [...], "projects": [...], "advising": [...], "coauthors": [...], "warnings": [...]}}
 """
         
-        agent = Agent(task=task, llm=llm, browser=browser, max_actions_per_step=5)
+        agent = Agent(task=task, llm=llm)
         
         try:
             result = await agent.run(max_steps=20)
@@ -185,8 +185,6 @@ Return JSON:
             return {'warnings': ['Could not parse response'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
         except json.JSONDecodeError:
             return {'warnings': ['JSON parse error'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
-        finally:
-            await browser.close()
     
     def _process_production(self, data: Dict[str, Any], cutoff_date: datetime) -> Dict[str, Any]:
         pub_by_type = defaultdict(int)
@@ -361,4 +359,3 @@ Return JSON:
     
     def _error_response(self, error_type: str, message: str) -> str:
         return json.dumps({'status': 'error', 'error_type': error_type, 'message': message, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False, indent=2)
-

@@ -60,18 +60,12 @@ def debug():
     except Exception as e:
         errors.append({"browser_use.Agent": str(e)})
     
+    # Test ChatOpenAI from browser_use
     try:
-        from browser_use import Browser, BrowserConfig
-        errors.append({"browser_use.Browser": "OK"})
+        from browser_use import ChatOpenAI
+        errors.append({"browser_use.ChatOpenAI": "OK"})
     except Exception as e:
-        errors.append({"browser_use.Browser": str(e)})
-    
-    # Test langchain import
-    try:
-        from langchain_openai import ChatOpenAI
-        errors.append({"langchain_openai": "OK"})
-    except Exception as e:
-        errors.append({"langchain_openai": str(e)})
+        errors.append({"browser_use.ChatOpenAI": str(e)})
     
     # Test playwright
     try:
