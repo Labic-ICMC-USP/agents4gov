@@ -161,33 +161,44 @@ class Tools:
         llm = ChatOpenAI(model=self.openai_model)
         
         task = f"""
-TASK: Extract academic data from Brazilian Lattes CV.
+TASK: Extract academic data from Brazilian Lattes CV for "{name}".
 
-DO NOT use search engines. Navigate DIRECTLY to these URLs:
+NAVIGATION (try in order):
+1. Go to https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
+2. In the search form, enter name: "{name}"
+3. Click search button ("Buscar")
+4. Find and click on the researcher matching Lattes ID: {lattes_id}
+5. If search fails, try direct URL: {profile_url}
 
-STEP 1: Go to https://buscatextual.cnpq.br/buscatextual/visualizacv.do?id={lattes_id}
-STEP 2: If that fails, try: {profile_url}
-STEP 3: Wait for researcher name "{name}" to appear on page
-STEP 4: Scroll down and look for sections (in Portuguese):
-   - "Artigos completos publicados" = journal articles
-   - "Projetos de pesquisa" = projects
-   - "Orientações" = supervisions
-STEP 5: Extract data from years {cutoff_year}-{current_year} only
+ON PROFILE PAGE:
+- Wait for page to load completely
+- Look for researcher name "{name}" 
+- If page shows "Currículo não encontrado" or error, profile doesn't exist
 
-STEP 6: Return ONLY this JSON (no other text):
+EXTRACT (only years {cutoff_year}-{current_year}):
+- "Artigos completos publicados em periódicos" = journal publications
+- "Trabalhos em eventos" = conference papers
+- "Projetos de pesquisa" = research projects  
+- "Orientações" = supervisions (PhD, Masters, etc)
+- Current affiliation (institution, department)
+
+RETURN ONLY THIS JSON:
 ```json
 {{
   "last_update": null,
-  "affiliations": [],
-  "publications": [{{"title": "...", "year": 2024, "type": "journal"}}],
-  "projects": [{{"title": "...", "start_year": 2022}}],
-  "advising": [{{"name": "...", "level": "PhD", "year": 2023}}],
-  "coauthors": [],
+  "affiliations": [{{"institution": "USP", "department": "ICMC"}}],
+  "publications": [{{"title": "Paper Title", "year": 2024, "type": "journal", "venue": "Journal Name"}}],
+  "projects": [{{"title": "Project Name", "start_year": 2022, "status": "active"}}],
+  "advising": [{{"name": "Student Name", "level": "PhD", "year": 2023}}],
+  "coauthors": [{{"name": "Coauthor Name", "count": 2}}],
   "warnings": []
 }}
 ```
 
-If page blocked or captcha, return: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+ERROR RESPONSES:
+- If captcha/blocked: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- If profile not found: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- If page error: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
         agent = Agent(task=task, llm=llm)
