@@ -230,20 +230,12 @@ If page blocked or captcha, return: {{"warnings": ["captcha_blocked"], "publicat
         active_proj, concluded_proj = [], []
         for proj in data.get('projects', []):
             if self._in_window(self._parse_year(proj.get('start_year')), cutoff_date):
-                # Use end_year to determine status if status field missing
-                if proj.get('status') == 'active' or (not proj.get('status') and not proj.get('end_year')):
-                    active_proj.append(proj)
-                else:
-                    concluded_proj.append(proj)
+                (active_proj if proj.get('status') == 'active' else concluded_proj).append(proj)
         
         ongoing_adv, concluded_adv = [], []
         for adv in data.get('advising', []):
             if self._in_window(self._parse_year(adv.get('year')), cutoff_date):
-                # Default to concluded if status missing
-                if adv.get('status') == 'ongoing':
-                    ongoing_adv.append(adv)
-                else:
-                    concluded_adv.append(adv)
+                (ongoing_adv if adv.get('status') == 'ongoing' else concluded_adv).append(adv)
         
         return {
             'publications': {'total': len(filtered_pubs), 'by_type': dict(pub_by_type), 'top_items': filtered_pubs[:10]},
