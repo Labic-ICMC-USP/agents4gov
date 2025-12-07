@@ -161,47 +161,33 @@ class Tools:
         llm = ChatOpenAI(model=self.openai_model)
         
         task = f"""
-TASK: Extract academic data from a Brazilian Lattes CV page.
+TASK: Extract academic data from Brazilian Lattes CV.
 
-STEP 1: Go to {profile_url}
-STEP 2: Wait for the page to fully load (look for the researcher name to appear)
-STEP 3: Find and extract the following information (only items from {cutoff_year} to {current_year}):
+DO NOT use search engines. Navigate DIRECTLY to these URLs:
 
-SECTIONS TO FIND (Portuguese labels):
-- "Artigos completos publicados em periódicos" = journal articles
-- "Trabalhos completos publicados em anais de congressos" = conference papers  
-- "Projetos de pesquisa" = research projects
-- "Orientações" = supervisions/advising
+STEP 1: Go to https://buscatextual.cnpq.br/buscatextual/visualizacv.do?id={lattes_id}
+STEP 2: If that fails, try: {profile_url}
+STEP 3: Wait for researcher name "{name}" to appear on page
+STEP 4: Scroll down and look for sections (in Portuguese):
+   - "Artigos completos publicados" = journal articles
+   - "Projetos de pesquisa" = projects
+   - "Orientações" = supervisions
+STEP 5: Extract data from years {cutoff_year}-{current_year} only
 
-STEP 4: After extracting, respond with ONLY a JSON object (no other text):
-
+STEP 6: Return ONLY this JSON (no other text):
 ```json
 {{
-  "last_update": "extracted date or null",
-  "affiliations": [
-    {{"institution": "name", "department": "dept name"}}
-  ],
-  "publications": [
-    {{"title": "paper title", "year": 2024, "type": "journal", "venue": "journal name"}}
-  ],
-  "projects": [
-    {{"title": "project name", "start_year": 2022, "status": "active"}}
-  ],
-  "advising": [
-    {{"name": "student name", "level": "PhD", "year": 2023}}
-  ],
-  "coauthors": [
-    {{"name": "coauthor name", "count": 3}}
-  ],
+  "last_update": null,
+  "affiliations": [],
+  "publications": [{{"title": "...", "year": 2024, "type": "journal"}}],
+  "projects": [{{"title": "...", "start_year": 2022}}],
+  "advising": [{{"name": "...", "level": "PhD", "year": 2023}}],
+  "coauthors": [],
   "warnings": []
 }}
 ```
 
-IMPORTANT: 
-- Return ONLY the JSON, no explanations
-- Use null for missing values
-- Empty arrays [] if section not found
-- Extract max 10 items per category
+If page blocked or captcha, return: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
         agent = Agent(task=task, llm=llm)
