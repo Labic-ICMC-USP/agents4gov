@@ -4,3 +4,4 @@ open-webui
 browser-use
 playwright
 python-dateutil
+openml
