@@ -12,7 +12,7 @@ BROWSER_USE_AVAILABLE = False
 BROWSER_IMPORT_ERROR = None
 
 try:
-    from browser_use import Agent, ChatOpenAI
+    from browser_use import Agent, Browser, ChatOpenAI
     BROWSER_USE_AVAILABLE = True
 except Exception as e:
     BROWSER_IMPORT_ERROR = str(e)
@@ -26,6 +26,7 @@ class Tools:
         self.rate_limit_delay = 2.0
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.use_cloud_browser = os.getenv("BROWSER_USE_CLOUD", "true").lower() == "true"
     
     def analyze_researchers_coi(
         self,
@@ -208,10 +209,16 @@ ERROR RESPONSES (return these JSON if applicable):
 - If page error/timeout: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
+        # Create browser with cloud stealth mode if enabled
+        browser = None
+        if self.use_cloud_browser:
+            browser = Browser(use_cloud=True)
+        
         # Create agent with extended settings
         agent = Agent(
             task=task, 
             llm=llm,
+            browser=browser,
             max_actions_per_step=4  # Limit actions per step for stability
         )
         

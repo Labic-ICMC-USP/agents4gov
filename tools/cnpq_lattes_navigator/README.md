@@ -24,11 +24,13 @@ cnpq_lattes_navigator/
 
 ### Environment Variables
 
-| Variable | Required | Default |
-|----------|----------|---------|
-| OPENAI_API_KEY | Yes | - |
-| OPENAI_MODEL | No | gpt-4o-mini |
-| PORT | No | 8000 (auto-set by Railway) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| OPENAI_API_KEY | Yes | - | OpenAI API key for LLM |
+| OPENAI_MODEL | No | gpt-4o-mini | Model to use |
+| PORT | No | 8000 | Server port (auto-set by Railway) |
+| BROWSER_USE_API_KEY | Yes | - | Browser-Use Cloud API key (get from cloud.browser-use.com) |
+| BROWSER_USE_CLOUD | No | true | Use cloud browser for stealth mode |
 
 ### Deploy
 

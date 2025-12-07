@@ -1,7 +1,8 @@
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    BROWSER_USE_CLOUD=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
