@@ -165,48 +165,50 @@ class Tools:
         task = f"""
 TASK: Extract academic data from Brazilian Lattes CV for researcher "{name}" with Lattes ID "{lattes_id}".
 
-IMPORTANT: Direct CV URL access triggers CAPTCHA. You MUST use the search portal.
+CRITICAL RULES:
+- Do ONE action at a time, then WAIT for page to stabilize
+- After clicking ANY button/link, WAIT at least 5 seconds before next action
+- The page will reload after search - wait for new content to appear
+- Do NOT try to read the page immediately after clicking
 
-NAVIGATION FLOW:
-1. Go to https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
-2. WAIT 3 seconds for page to load
-3. In the search form, find the "Nome" field and type: {name}
-4. Click the search button (contains text "Buscar" with magnifying glass icon class "mini-ico-lupa")
-5. WAIT 5 seconds for search results
+NAVIGATION STEPS (one action per step):
+1. Go to: https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
+2. Wait for search form to appear
+3. Type "{name}" in the "Nome" input field
+4. Click the "Buscar" button (has magnifying glass icon)
+5. IMPORTANT: Wait at least 5 seconds for results page to fully load
+6. Look at search results - find researcher name matching "{name}"
 
-RESULT VALIDATION (first page only):
-For each result in the search results list:
-  a. Click to open the CV
-  b. WAIT 3 seconds for CV page to load
-  c. Check if the URL contains "{lattes_id}" OR if the page contains this ID
-  d. If ID matches: This is the correct profile - proceed to extraction
-  e. If ID does NOT match: Go back to results and try the next result
-  f. Stop after checking all results on first page (no pagination needed)
+FINDING THE CORRECT CV:
+- Click on a result that matches the name
+- Wait for CV page to load completely
+- Check if URL or page contains ID: {lattes_id}
+- If ID matches: extract data
+- If ID does NOT match: go back and try next result
 
-ON CORRECT PROFILE (ID matched):
-- Extract data from years {cutoff_year}-{current_year} only
-- "Artigos completos publicados em periódicos" = journal publications
-- "Projetos de pesquisa" = research projects
-- "Orientações" = supervisions (PhD, Masters, undergrad)
-- Current affiliation from header/sidebar
+DATA TO EXTRACT (years {cutoff_year}-{current_year} only):
+- "Artigos completos publicados em periódicos" = publications
+- "Projetos de pesquisa" = projects  
+- "Orientações" = advising (PhD, Masters students)
+- Institution/department from header
 
-RETURN ONLY THIS JSON:
+RETURN THIS JSON FORMAT:
 ```json
 {{
   "last_update": null,
-  "affiliations": [{{"institution": "Institution Name", "department": "Department"}}],
-  "publications": [{{"title": "Paper Title", "year": 2024, "type": "journal", "venue": "Journal Name"}}],
-  "projects": [{{"title": "Project Name", "start_year": 2022, "status": "active"}}],
-  "advising": [{{"name": "Student Name", "level": "PhD", "year": 2023}}],
+  "affiliations": [{{"institution": "Name", "department": "Dept"}}],
+  "publications": [{{"title": "Title", "year": 2024, "type": "journal", "venue": "Journal"}}],
+  "projects": [{{"title": "Project", "start_year": 2022, "status": "active"}}],
+  "advising": [{{"name": "Student", "level": "PhD", "year": 2023}}],
   "coauthors": [],
   "warnings": []
 }}
 ```
 
-ERROR RESPONSES (return these JSON if applicable):
-- If captcha appears: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- If no matching ID found in results: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- If page error/timeout: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+ERROR RESPONSES:
+- Captcha: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- Not found: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- Error: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
         # Create browser with cloud stealth mode if enabled
@@ -214,12 +216,13 @@ ERROR RESPONSES (return these JSON if applicable):
         if self.use_cloud_browser:
             browser = Browser(use_cloud=True)
         
-        # Create agent with extended settings
+        # Create agent with settings optimized for page transitions
+        # max_actions_per_step=1 prevents race conditions when page navigates
         agent = Agent(
             task=task, 
             llm=llm,
             browser=browser,
-            max_actions_per_step=4  # Limit actions per step for stability
+            max_actions_per_step=1  # One action at a time to handle page transitions
         )
         
         # Retry logic
@@ -228,7 +231,7 @@ ERROR RESPONSES (return these JSON if applicable):
         
         for attempt in range(max_retries + 1):
             try:
-                history = await agent.run(max_steps=30)  # More steps for retries
+                history = await agent.run(max_steps=50)  # More steps for single-action mode
                 break  # Success, exit retry loop
             except Exception as retry_error:
                 last_error = retry_error
