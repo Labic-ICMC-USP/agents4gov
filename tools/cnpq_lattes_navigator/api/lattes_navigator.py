@@ -161,30 +161,70 @@ class Tools:
         llm = ChatOpenAI(model=self.openai_model)
         
         task = f"""
-Navigate to {profile_url} and extract data for "{name}" (years {cutoff_year}-{current_year}):
+TASK: Extract academic data from a Brazilian Lattes CV page.
 
-1. Wait for page load
-2. Extract: name, institution, last update date
-3. Publications (Artigos/Trabalhos): title, year, venue, type, authors
-4. Projects: title, role, sponsor, years, status
-5. Advising (Orientacoes): advisee name, level, year, status
-6. Affiliations: institution, department, lab
+STEP 1: Go to {profile_url}
+STEP 2: Wait for the page to fully load (look for the researcher name to appear)
+STEP 3: Find and extract the following information (only items from {cutoff_year} to {current_year}):
 
-Return JSON:
-{{"last_update": "...", "affiliations": [...], "publications": [...], "projects": [...], "advising": [...], "coauthors": [...], "warnings": [...]}}
+SECTIONS TO FIND (Portuguese labels):
+- "Artigos completos publicados em periódicos" = journal articles
+- "Trabalhos completos publicados em anais de congressos" = conference papers  
+- "Projetos de pesquisa" = research projects
+- "Orientações" = supervisions/advising
+
+STEP 4: After extracting, respond with ONLY a JSON object (no other text):
+
+```json
+{{
+  "last_update": "extracted date or null",
+  "affiliations": [
+    {{"institution": "name", "department": "dept name"}}
+  ],
+  "publications": [
+    {{"title": "paper title", "year": 2024, "type": "journal", "venue": "journal name"}}
+  ],
+  "projects": [
+    {{"title": "project name", "start_year": 2022, "status": "active"}}
+  ],
+  "advising": [
+    {{"name": "student name", "level": "PhD", "year": 2023}}
+  ],
+  "coauthors": [
+    {{"name": "coauthor name", "count": 3}}
+  ],
+  "warnings": []
+}}
+```
+
+IMPORTANT: 
+- Return ONLY the JSON, no explanations
+- Use null for missing values
+- Empty arrays [] if section not found
+- Extract max 10 items per category
 """
         
         agent = Agent(task=task, llm=llm)
         
         try:
-            result = await agent.run(max_steps=20)
+            result = await agent.run(max_steps=25)
             result_str = str(result)
+            
+            # Try to find JSON block
+            json_block = re.search(r'```json\s*([\s\S]*?)\s*```', result_str)
+            if json_block:
+                return json.loads(json_block.group(1))
+            
+            # Try to find raw JSON object
             json_match = re.search(r'\{[\s\S]*\}', result_str)
             if json_match:
                 return json.loads(json_match.group())
-            return {'warnings': ['Could not parse response'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
-        except json.JSONDecodeError:
-            return {'warnings': ['JSON parse error'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+            
+            return {'warnings': [f'No JSON found in response: {result_str[:200]}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+        except json.JSONDecodeError as e:
+            return {'warnings': [f'JSON parse error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+        except Exception as e:
+            return {'warnings': [f'Extraction error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
     
     def _process_production(self, data: Dict[str, Any], cutoff_date: datetime) -> Dict[str, Any]:
         pub_by_type = defaultdict(int)
