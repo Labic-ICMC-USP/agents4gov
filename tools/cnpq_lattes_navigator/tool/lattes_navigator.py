@@ -160,47 +160,41 @@ class Tools:
         
         llm = ChatOpenAI(model=self.openai_model)
         
-        # Improved task with explicit waits and text-based selectors
+        # Task with natural navigation flow to avoid CAPTCHA
         task = f"""
-TASK: Extract academic data from Brazilian Lattes CV for "{name}".
+TASK: Extract academic data from Brazilian Lattes CV for researcher "{name}" with Lattes ID "{lattes_id}".
 
-IMPORTANT INSTRUCTIONS:
-- WAIT at least 5 seconds after each page navigation for JavaScript to load
-- Use TEXT-BASED selectors (click buttons by their text like "Buscar", not by index)
-- If a click fails, WAIT 3 seconds and retry up to 3 times
-- The CNPq website is slow - be patient
+IMPORTANT: Direct CV URL access triggers CAPTCHA. You MUST use the search portal.
 
-NAVIGATION STEPS:
-1. Navigate to: https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
-2. WAIT 5 seconds for page to fully load
-3. Look for input field labeled "Nome" (text input for researcher name) and type: {name}
-4. Find and click the button containing text "Buscar" (it has a magnifying glass icon with class "mini-ico-lupa")
-5. WAIT 5 seconds for search results to appear
-6. In results table, find and click on the link containing "{name}" or ID "{lattes_id}"
-7. If search fails after 3 attempts, try direct URL: {profile_url}
-8. WAIT 5 seconds for profile page to load
+NAVIGATION FLOW:
+1. Go to https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
+2. WAIT 3 seconds for page to load
+3. In the search form, find the "Nome" field and type: {name}
+4. Click the search button (contains text "Buscar" with magnifying glass icon class "mini-ico-lupa")
+5. WAIT 5 seconds for search results
 
-BUTTON SELECTOR HINTS:
-- Search button has: <span class="mini-ico mini-ico-lupa"></span>Buscar
-- Use text "Buscar" to find the button, or look for element containing "mini-ico-lupa" class
+RESULT VALIDATION (first page only):
+For each result in the search results list:
+  a. Click to open the CV
+  b. WAIT 3 seconds for CV page to load
+  c. Check if the URL contains "{lattes_id}" OR if the page contains this ID
+  d. If ID matches: This is the correct profile - proceed to extraction
+  e. If ID does NOT match: Go back to results and try the next result
+  f. Stop after checking all results on first page (no pagination needed)
 
-ON PROFILE PAGE:
-- WAIT for text "{name}" to appear on page (confirms page loaded)
-- If you see "Currículo não encontrado" or blank page, return profile_not_found error
-- If you see captcha or access denied, return captcha_blocked error
+ON CORRECT PROFILE (ID matched):
+- Extract data from years {cutoff_year}-{current_year} only
+- "Artigos completos publicados em periódicos" = journal publications
+- "Projetos de pesquisa" = research projects
+- "Orientações" = supervisions (PhD, Masters, undergrad)
+- Current affiliation from header/sidebar
 
-EXTRACT DATA (only years {cutoff_year}-{current_year}):
-- Look for section "Artigos completos publicados em periódicos" - extract titles, years, venues
-- Look for section "Projetos de pesquisa" - extract project names, years
-- Look for section "Orientações" - extract student names, levels (PhD/Masters), years
-- Extract current institution from header
-
-RETURN ONLY THIS JSON (no other text):
+RETURN ONLY THIS JSON:
 ```json
 {{
   "last_update": null,
   "affiliations": [{{"institution": "Institution Name", "department": "Department"}}],
-  "publications": [{{"title": "Paper Title", "year": 2024, "type": "journal", "venue": "Journal"}}],
+  "publications": [{{"title": "Paper Title", "year": 2024, "type": "journal", "venue": "Journal Name"}}],
   "projects": [{{"title": "Project Name", "start_year": 2022, "status": "active"}}],
   "advising": [{{"name": "Student Name", "level": "PhD", "year": 2023}}],
   "coauthors": [],
@@ -208,10 +202,10 @@ RETURN ONLY THIS JSON (no other text):
 }}
 ```
 
-ERROR RESPONSES:
-- Captcha/blocked: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- Profile not found: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- Page error: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+ERROR RESPONSES (return these JSON if applicable):
+- If captcha appears: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- If no matching ID found in results: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- If page error/timeout: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
         # Create agent with extended settings
