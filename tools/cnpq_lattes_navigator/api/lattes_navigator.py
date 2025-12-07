@@ -193,11 +193,24 @@ If page blocked or captcha, return: {{"warnings": ["captcha_blocked"], "publicat
         agent = Agent(task=task, llm=llm)
         
         try:
-            result = await agent.run(max_steps=25)
-            result_str = str(result)
+            history = await agent.run(max_steps=25)
+            
+            # Extract content from all results in history
+            all_content = []
+            if hasattr(history, 'all_results'):
+                for r in history.all_results:
+                    if hasattr(r, 'extracted_content') and r.extracted_content:
+                        all_content.append(str(r.extracted_content))
+            
+            # Also check final_result if available
+            if hasattr(history, 'final_result') and history.final_result:
+                all_content.append(str(history.final_result))
+            
+            # Combine all content
+            full_text = '\n'.join(all_content)
             
             # Try to find JSON block
-            json_block = re.search(r'```json\s*([\s\S]*?)\s*```', result_str)
+            json_block = re.search(r'```json\s*([\s\S]*?)\s*```', full_text)
             if json_block:
                 try:
                     return json.loads(json_block.group(1))
@@ -205,7 +218,15 @@ If page blocked or captcha, return: {{"warnings": ["captcha_blocked"], "publicat
                     pass
             
             # Try to find raw JSON object
-            json_match = re.search(r'\{[\s\S]*\}', result_str)
+            json_match = re.search(r'\{[^{}]*"warnings"[^{}]*\}', full_text)
+            if json_match:
+                try:
+                    return json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    pass
+            
+            # Try any JSON object
+            json_match = re.search(r'\{[\s\S]*\}', full_text)
             if json_match:
                 try:
                     return json.loads(json_match.group())
@@ -213,7 +234,7 @@ If page blocked or captcha, return: {{"warnings": ["captcha_blocked"], "publicat
                     pass
             
             # Return debug info
-            return {'warnings': [f'Raw response: {result_str[:500]}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+            return {'warnings': [f'No JSON in response. Content: {full_text[:500]}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
         except Exception as e:
             return {'warnings': [f'Error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
     
