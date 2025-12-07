@@ -213,18 +213,23 @@ IMPORTANT:
             # Try to find JSON block
             json_block = re.search(r'```json\s*([\s\S]*?)\s*```', result_str)
             if json_block:
-                return json.loads(json_block.group(1))
+                try:
+                    return json.loads(json_block.group(1))
+                except json.JSONDecodeError:
+                    pass
             
             # Try to find raw JSON object
             json_match = re.search(r'\{[\s\S]*\}', result_str)
             if json_match:
-                return json.loads(json_match.group())
+                try:
+                    return json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    pass
             
-            return {'warnings': [f'No JSON found in response: {result_str[:200]}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
-        except json.JSONDecodeError as e:
-            return {'warnings': [f'JSON parse error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+            # Return debug info
+            return {'warnings': [f'Raw response: {result_str[:500]}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
         except Exception as e:
-            return {'warnings': [f'Extraction error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+            return {'warnings': [f'Error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
     
     def _process_production(self, data: Dict[str, Any], cutoff_date: datetime) -> Dict[str, Any]:
         pub_by_type = defaultdict(int)
