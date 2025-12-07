@@ -176,8 +176,7 @@ NAVIGATION STEPS (one action per step):
 2. Wait for search form to appear
 3. Type "{name}" in the "Nome" input field
 4. Click the "Buscar" button (has magnifying glass icon)
-5. IMPORTANT: Wait at least 5 seconds for results page to fully load
-6. Look at search results - find researcher name matching "{name}"
+5. Look at search results - find researcher name matching "{name}"
 
 FINDING THE CORRECT CV:
 - Click on a result that matches the name
@@ -185,6 +184,7 @@ FINDING THE CORRECT CV:
 - Check if URL or page contains ID: {lattes_id}
 - If ID matches: extract data
 - If ID does NOT match: go back and try next result
+- If NO MORE RESULTS to check: return "profile_not_found" error and END task
 
 DATA TO EXTRACT (years {cutoff_year}-{current_year} only):
 - "Artigos completos publicados em periódicos" = publications
@@ -214,7 +214,13 @@ ERROR RESPONSES:
         # Create browser with cloud stealth mode if enabled
         browser = None
         if self.use_cloud_browser:
-            browser = Browser(use_cloud=True)
+            browser = Browser(
+                cloud_proxy_country_code='us',  # US proxy for stealth
+                cloud_timeout=15,  # 15 min session (free tier max)
+                wait_between_actions=2.0,  # Wait 2s between actions
+                wait_for_network_idle_page_load_time=3.0,  # Wait for network idle
+                minimum_wait_page_load_time=2.0,  # Min wait after navigation
+            )
         
         # Create agent with settings optimized for page transitions
         # max_actions_per_step=1 prevents race conditions when page navigates
@@ -225,14 +231,13 @@ ERROR RESPONSES:
             max_actions_per_step=1  # One action at a time to handle page transitions
         )
         
-        # Retry logic
         max_retries = 2
         last_error = None
         
         for attempt in range(max_retries + 1):
             try:
-                history = await agent.run(max_steps=50)  # More steps for single-action mode
-                break  # Success, exit retry loop
+                history = await agent.run(max_steps=20)  # More steps for single-action mode
+                break
             except Exception as retry_error:
                 last_error = retry_error
                 if attempt < max_retries:
@@ -247,8 +252,6 @@ ERROR RESPONSES:
                     }
         
         try:
-            
-            # Extract agent logs
             agent_logs = []
             all_content = []
             
@@ -264,14 +267,11 @@ ERROR RESPONSES:
                         step_log['error'] = str(r.error)
                     agent_logs.append(step_log)
             
-            # Also check final_result if available
             if hasattr(history, 'final_result') and history.final_result:
                 all_content.append(str(history.final_result))
             
-            # Combine all content
             full_text = '\n'.join(all_content)
             
-            # Try to find JSON block
             json_block = re.search(r'```json\s*([\s\S]*?)\s*```', full_text)
             if json_block:
                 try:
@@ -281,7 +281,6 @@ ERROR RESPONSES:
                 except json.JSONDecodeError:
                     pass
             
-            # Try to find raw JSON object with warnings
             json_match = re.search(r'\{[^{}]*"warnings"[^{}]*\}', full_text)
             if json_match:
                 try:
@@ -291,7 +290,6 @@ ERROR RESPONSES:
                 except json.JSONDecodeError:
                     pass
             
-            # Try any JSON object
             json_match = re.search(r'\{[\s\S]*\}', full_text)
             if json_match:
                 try:
@@ -301,7 +299,6 @@ ERROR RESPONSES:
                 except json.JSONDecodeError:
                     pass
             
-            # Return debug info with logs
             return {
                 'warnings': [f'No JSON in response'],
                 'publications': [], 'projects': [], 'advising': [], 
