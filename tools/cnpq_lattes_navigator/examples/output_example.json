@@ -1,0 +1,408 @@
+{
+  "status": "success",
+  "execution_metadata": {
+    "execution_date": "2024-11-13T10:30:00.000Z",
+    "time_window_years": 5,
+    "cutoff_date": "2019-11-13T10:30:00.000Z",
+    "num_researchers": 3,
+    "coi_rules_active": {
+      "R1": true,
+      "R2": true,
+      "R3": true,
+      "R4": true,
+      "R5": true,
+      "R6": true,
+      "R7": true
+    }
+  },
+  "researchers": [
+    {
+      "person": {
+        "name": "Ana Silva Santos",
+        "lattes_id": "1234567890123456",
+        "profile_url": "http://lattes.cnpq.br/1234567890123456",
+        "last_update": "2024-10-15"
+      },
+      "production_5y": {
+        "publications": {
+          "total": 12,
+          "by_type": {
+            "journal": 8,
+            "conference": 3,
+            "chapter": 1
+          },
+          "top_items": [
+            {
+              "title": "Machine Learning Applications in Public Health Systems",
+              "year": 2023,
+              "venue": "Journal of Health Informatics",
+              "type": "journal",
+              "authors": ["Ana Silva Santos", "Carlos Oliveira Lima", "Maria Souza"]
+            },
+            {
+              "title": "Data-Driven Decision Making in Government Services",
+              "year": 2022,
+              "venue": "International Conference on E-Government",
+              "type": "conference",
+              "authors": ["Ana Silva Santos", "João Pedro", "Beatriz Costa Ferreira"]
+            },
+            {
+              "title": "Privacy Preserving Techniques for Public Data",
+              "year": 2021,
+              "venue": "Information Security Journal",
+              "type": "journal",
+              "authors": ["Ana Silva Santos", "Ricardo Alves"]
+            }
+          ]
+        },
+        "projects": {
+          "total": 3,
+          "active": [
+            {
+              "title": "AI for Public Services Modernization",
+              "role": "Coordinator",
+              "sponsor": "CNPq",
+              "start_year": 2022,
+              "end_year": null
+            }
+          ],
+          "concluded": [
+            {
+              "title": "Digital Transformation in Healthcare",
+              "role": "Researcher",
+              "sponsor": "FAPESP",
+              "start_year": 2019,
+              "end_year": 2022
+            },
+            {
+              "title": "Open Data Platform Development",
+              "role": "Co-coordinator",
+              "sponsor": "Ministry of Planning",
+              "start_year": 2020,
+              "end_year": 2021
+            }
+          ]
+        },
+        "advising": {
+          "total": 5,
+          "ongoing": [
+            {
+              "name": "Pedro Martins",
+              "level": "PhD",
+              "start_year": 2022
+            },
+            {
+              "name": "Julia Rodrigues",
+              "level": "MS",
+              "start_year": 2023
+            }
+          ],
+          "concluded": [
+            {
+              "name": "Lucas Fernandes",
+              "level": "MS",
+              "year": 2021
+            },
+            {
+              "name": "Camila Rocha",
+              "level": "MS",
+              "year": 2020
+            },
+            {
+              "name": "Rafael Dias",
+              "level": "IC",
+              "year": 2022
+            }
+          ]
+        },
+        "activities": [
+          {
+            "name": "Brazilian Conference on Artificial Intelligence - Program Committee",
+            "role": "PC Member",
+            "year": 2023
+          },
+          {
+            "name": "National E-Government Workshop - Organization",
+            "role": "Organizing Committee",
+            "year": 2022
+          }
+        ]
+      },
+      "affiliations_5y": [
+        {
+          "institution": "Universidade de São Paulo",
+          "department": "Instituto de Ciências Matemáticas e de Computação",
+          "lab_group": "Laboratório de Inteligência Computacional",
+          "start_year": 2018,
+          "end_year": null
+        }
+      ],
+      "coauthors_5y": [
+        {
+          "name": "Carlos Oliveira Lima",
+          "count": 4
+        },
+        {
+          "name": "Beatriz Costa Ferreira",
+          "count": 2
+        },
+        {
+          "name": "Maria Souza",
+          "count": 3
+        },
+        {
+          "name": "João Pedro",
+          "count": 2
+        },
+        {
+          "name": "Ricardo Alves",
+          "count": 1
+        }
+      ],
+      "warnings": [
+        "browser-use library not installed - using mock data. Install with: pip install browser-use"
+      ],
+      "evidence_urls": [
+        "http://lattes.cnpq.br/1234567890123456"
+      ]
+    },
+    {
+      "person": {
+        "name": "Carlos Oliveira Lima",
+        "lattes_id": "2345678901234567",
+        "profile_url": "http://lattes.cnpq.br/2345678901234567",
+        "last_update": "2024-09-20"
+      },
+      "production_5y": {
+        "publications": {
+          "total": 15,
+          "by_type": {
+            "journal": 10,
+            "conference": 4,
+            "book": 1
+          },
+          "top_items": [
+            {
+              "title": "Machine Learning Applications in Public Health Systems",
+              "year": 2023,
+              "venue": "Journal of Health Informatics",
+              "type": "journal",
+              "authors": ["Ana Silva Santos", "Carlos Oliveira Lima", "Maria Souza"]
+            },
+            {
+              "title": "Deep Learning for Medical Image Analysis",
+              "year": 2023,
+              "venue": "Medical Imaging Conference",
+              "type": "conference",
+              "authors": ["Carlos Oliveira Lima", "Patricia Mendes"]
+            }
+          ]
+        },
+        "projects": {
+          "total": 2,
+          "active": [
+            {
+              "title": "AI for Public Services Modernization",
+              "role": "Researcher",
+              "sponsor": "CNPq",
+              "start_year": 2022,
+              "end_year": null
+            }
+          ],
+          "concluded": [
+            {
+              "title": "Digital Transformation in Healthcare",
+              "role": "Researcher",
+              "sponsor": "FAPESP",
+              "start_year": 2019,
+              "end_year": 2022
+            }
+          ]
+        },
+        "advising": {
+          "total": 3,
+          "ongoing": [
+            {
+              "name": "Marcos Silva",
+              "level": "PhD",
+              "start_year": 2021
+            }
+          ],
+          "concluded": [
+            {
+              "name": "Fernanda Costa",
+              "level": "MS",
+              "year": 2020
+            },
+            {
+              "name": "Gabriel Santos",
+              "level": "MS",
+              "year": 2022
+            }
+          ]
+        },
+        "activities": []
+      },
+      "affiliations_5y": [
+        {
+          "institution": "Universidade de São Paulo",
+          "department": "Instituto de Ciências Matemáticas e de Computação",
+          "lab_group": "Laboratório de Inteligência Computacional",
+          "start_year": 2017,
+          "end_year": null
+        }
+      ],
+      "coauthors_5y": [
+        {
+          "name": "Ana Silva Santos",
+          "count": 4
+        },
+        {
+          "name": "Maria Souza",
+          "count": 3
+        },
+        {
+          "name": "Patricia Mendes",
+          "count": 2
+        }
+      ],
+      "warnings": [
+        "browser-use library not installed - using mock data. Install with: pip install browser-use"
+      ],
+      "evidence_urls": [
+        "http://lattes.cnpq.br/2345678901234567"
+      ]
+    },
+    {
+      "person": {
+        "name": "Beatriz Costa Ferreira",
+        "lattes_id": "3456789012345678",
+        "profile_url": "http://lattes.cnpq.br/3456789012345678",
+        "last_update": "2024-11-01"
+      },
+      "production_5y": {
+        "publications": {
+          "total": 8,
+          "by_type": {
+            "journal": 5,
+            "conference": 3
+          },
+          "top_items": [
+            {
+              "title": "Data-Driven Decision Making in Government Services",
+              "year": 2022,
+              "venue": "International Conference on E-Government",
+              "type": "conference",
+              "authors": ["Ana Silva Santos", "João Pedro", "Beatriz Costa Ferreira"]
+            },
+            {
+              "title": "Blockchain Applications in Public Administration",
+              "year": 2021,
+              "venue": "Government Information Quarterly",
+              "type": "journal",
+              "authors": ["Beatriz Costa Ferreira", "Roberto Nunes"]
+            }
+          ]
+        },
+        "projects": {
+          "total": 1,
+          "active": [],
+          "concluded": [
+            {
+              "title": "Open Data Platform Development",
+              "role": "Researcher",
+              "sponsor": "Ministry of Planning",
+              "start_year": 2020,
+              "end_year": 2021
+            }
+          ]
+        },
+        "advising": {
+          "total": 1,
+          "ongoing": [
+            {
+              "name": "Sofia Almeida",
+              "level": "MS",
+              "start_year": 2023
+            }
+          ],
+          "concluded": []
+        },
+        "activities": [
+          {
+            "name": "National E-Government Workshop - Organization",
+            "role": "Organizing Committee",
+            "year": 2022
+          }
+        ]
+      },
+      "affiliations_5y": [
+        {
+          "institution": "Universidade Federal do Rio de Janeiro",
+          "department": "Instituto de Computação",
+          "lab_group": null,
+          "start_year": 2019,
+          "end_year": null
+        }
+      ],
+      "coauthors_5y": [
+        {
+          "name": "Ana Silva Santos",
+          "count": 2
+        },
+        {
+          "name": "João Pedro",
+          "count": 1
+        },
+        {
+          "name": "Roberto Nunes",
+          "count": 3
+        }
+      ],
+      "warnings": [
+        "browser-use library not installed - using mock data. Install with: pip install browser-use"
+      ],
+      "evidence_urls": [
+        "http://lattes.cnpq.br/3456789012345678"
+      ]
+    }
+  ],
+  "coi_matrix": {
+    "pairs": [
+      {
+        "a_lattes_id": "1234567890123456",
+        "b_lattes_id": "2345678901234567",
+        "a_name": "Ana Silva Santos",
+        "b_name": "Carlos Oliveira Lima",
+        "rules_triggered": ["R1", "R3", "R4", "R6", "R7"],
+        "confidence": "high",
+        "evidence": [
+          "Shared publication: Machine Learning Applications in Public Health Systems (2023)",
+          "Shared publication: Digital Health Systems Analysis (2022)",
+          "Shared publication: AI in Healthcare Applications (2021)",
+          "Shared publication: Public Health Data Mining (2020)",
+          "Same affiliation: Universidade de São Paulo - Instituto de Ciências Matemáticas e de Computação",
+          "Same lab/group: Laboratório de Inteligência Computacional",
+          "Shared project: AI for Public Services Modernization",
+          "Shared project: Digital Transformation in Healthcare"
+        ]
+      },
+      {
+        "a_lattes_id": "1234567890123456",
+        "b_lattes_id": "3456789012345678",
+        "a_name": "Ana Silva Santos",
+        "b_name": "Beatriz Costa Ferreira",
+        "rules_triggered": ["R1", "R4", "R5"],
+        "confidence": "medium",
+        "evidence": [
+          "Shared publication: Data-Driven Decision Making in Government Services (2022)",
+          "Shared publication: E-Government Implementation Challenges (2021)",
+          "Shared project: Open Data Platform Development",
+          "Shared activity: National E-Government Workshop - Organization"
+        ]
+      }
+    ]
+  },
+  "summary_text": "Analysis of 3 researchers over the last 5 years. Detected 2 potential conflict(s) of interest. Confidence levels: 1 high, 1 medium, 0 low."
+}
+
