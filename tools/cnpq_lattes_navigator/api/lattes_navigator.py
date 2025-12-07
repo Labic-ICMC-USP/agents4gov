@@ -8,12 +8,15 @@ from typing import List, Dict, Any, Optional, Tuple
 from collections import defaultdict
 from pydantic import Field
 
+BROWSER_USE_AVAILABLE = False
+BROWSER_IMPORT_ERROR = None
+
 try:
     from browser_use import Agent, Browser, BrowserConfig
     from langchain_openai import ChatOpenAI
     BROWSER_USE_AVAILABLE = True
-except ImportError:
-    BROWSER_USE_AVAILABLE = False
+except Exception as e:
+    BROWSER_IMPORT_ERROR = str(e)
 
 
 class Tools:
