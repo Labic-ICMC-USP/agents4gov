@@ -160,58 +160,105 @@ class Tools:
         
         llm = ChatOpenAI(model=self.openai_model)
         
+        # Improved task with explicit waits and text-based selectors
         task = f"""
 TASK: Extract academic data from Brazilian Lattes CV for "{name}".
 
-NAVIGATION (try in order):
-1. Go to https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
-2. In the search form, enter name: "{name}"
-3. Click search button ("Buscar")
-4. Find and click on the researcher matching Lattes ID: {lattes_id}
-5. If search fails, try direct URL: {profile_url}
+IMPORTANT INSTRUCTIONS:
+- WAIT at least 5 seconds after each page navigation for JavaScript to load
+- Use TEXT-BASED selectors (click buttons by their text like "Buscar", not by index)
+- If a click fails, WAIT 3 seconds and retry up to 3 times
+- The CNPq website is slow - be patient
+
+NAVIGATION STEPS:
+1. Navigate to: https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
+2. WAIT 5 seconds for page to fully load
+3. Look for input field labeled "Nome" (text input for researcher name) and type: {name}
+4. Find and click the button containing text "Buscar" (it has a magnifying glass icon with class "mini-ico-lupa")
+5. WAIT 5 seconds for search results to appear
+6. In results table, find and click on the link containing "{name}" or ID "{lattes_id}"
+7. If search fails after 3 attempts, try direct URL: {profile_url}
+8. WAIT 5 seconds for profile page to load
+
+BUTTON SELECTOR HINTS:
+- Search button has: <span class="mini-ico mini-ico-lupa"></span>Buscar
+- Use text "Buscar" to find the button, or look for element containing "mini-ico-lupa" class
 
 ON PROFILE PAGE:
-- Wait for page to load completely
-- Look for researcher name "{name}" 
-- If page shows "Currículo não encontrado" or error, profile doesn't exist
+- WAIT for text "{name}" to appear on page (confirms page loaded)
+- If you see "Currículo não encontrado" or blank page, return profile_not_found error
+- If you see captcha or access denied, return captcha_blocked error
 
-EXTRACT (only years {cutoff_year}-{current_year}):
-- "Artigos completos publicados em periódicos" = journal publications
-- "Trabalhos em eventos" = conference papers
-- "Projetos de pesquisa" = research projects  
-- "Orientações" = supervisions (PhD, Masters, etc)
-- Current affiliation (institution, department)
+EXTRACT DATA (only years {cutoff_year}-{current_year}):
+- Look for section "Artigos completos publicados em periódicos" - extract titles, years, venues
+- Look for section "Projetos de pesquisa" - extract project names, years
+- Look for section "Orientações" - extract student names, levels (PhD/Masters), years
+- Extract current institution from header
 
-RETURN ONLY THIS JSON:
+RETURN ONLY THIS JSON (no other text):
 ```json
 {{
   "last_update": null,
-  "affiliations": [{{"institution": "USP", "department": "ICMC"}}],
-  "publications": [{{"title": "Paper Title", "year": 2024, "type": "journal", "venue": "Journal Name"}}],
+  "affiliations": [{{"institution": "Institution Name", "department": "Department"}}],
+  "publications": [{{"title": "Paper Title", "year": 2024, "type": "journal", "venue": "Journal"}}],
   "projects": [{{"title": "Project Name", "start_year": 2022, "status": "active"}}],
   "advising": [{{"name": "Student Name", "level": "PhD", "year": 2023}}],
-  "coauthors": [{{"name": "Coauthor Name", "count": 2}}],
+  "coauthors": [],
   "warnings": []
 }}
 ```
 
 ERROR RESPONSES:
-- If captcha/blocked: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- If profile not found: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- If page error: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- Captcha/blocked: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- Profile not found: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- Page error: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
-        agent = Agent(task=task, llm=llm)
+        # Create agent with extended settings
+        agent = Agent(
+            task=task, 
+            llm=llm,
+            max_actions_per_step=4  # Limit actions per step for stability
+        )
+        
+        # Retry logic
+        max_retries = 2
+        last_error = None
+        
+        for attempt in range(max_retries + 1):
+            try:
+                history = await agent.run(max_steps=30)  # More steps for retries
+                break  # Success, exit retry loop
+            except Exception as retry_error:
+                last_error = retry_error
+                if attempt < max_retries:
+                    await asyncio.sleep(3)  # Wait before retry
+                    continue
+                else:
+                    return {
+                        'warnings': [f'Failed after {max_retries + 1} attempts: {str(last_error)}'],
+                        'publications': [], 'projects': [], 'advising': [],
+                        'affiliations': [], 'coauthors': [], 'last_update': None,
+                        'agent_logs': []
+                    }
         
         try:
-            history = await agent.run(max_steps=25)
             
-            # Extract content from all results in history
+            # Extract agent logs
+            agent_logs = []
             all_content = []
+            
             if hasattr(history, 'all_results'):
-                for r in history.all_results:
+                for i, r in enumerate(history.all_results):
+                    step_log = {'step': i + 1}
                     if hasattr(r, 'extracted_content') and r.extracted_content:
                         all_content.append(str(r.extracted_content))
+                        step_log['content'] = str(r.extracted_content)[:200]
+                    if hasattr(r, 'long_term_memory') and r.long_term_memory:
+                        step_log['memory'] = str(r.long_term_memory)[:200]
+                    if hasattr(r, 'error') and r.error:
+                        step_log['error'] = str(r.error)
+                    agent_logs.append(step_log)
             
             # Also check final_result if available
             if hasattr(history, 'final_result') and history.final_result:
@@ -224,15 +271,19 @@ ERROR RESPONSES:
             json_block = re.search(r'```json\s*([\s\S]*?)\s*```', full_text)
             if json_block:
                 try:
-                    return json.loads(json_block.group(1))
+                    result = json.loads(json_block.group(1))
+                    result['agent_logs'] = agent_logs
+                    return result
                 except json.JSONDecodeError:
                     pass
             
-            # Try to find raw JSON object
+            # Try to find raw JSON object with warnings
             json_match = re.search(r'\{[^{}]*"warnings"[^{}]*\}', full_text)
             if json_match:
                 try:
-                    return json.loads(json_match.group())
+                    result = json.loads(json_match.group())
+                    result['agent_logs'] = agent_logs
+                    return result
                 except json.JSONDecodeError:
                     pass
             
@@ -240,14 +291,22 @@ ERROR RESPONSES:
             json_match = re.search(r'\{[\s\S]*\}', full_text)
             if json_match:
                 try:
-                    return json.loads(json_match.group())
+                    result = json.loads(json_match.group())
+                    result['agent_logs'] = agent_logs
+                    return result
                 except json.JSONDecodeError:
                     pass
             
-            # Return debug info
-            return {'warnings': [f'No JSON in response. Content: {full_text[:500]}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+            # Return debug info with logs
+            return {
+                'warnings': [f'No JSON in response'],
+                'publications': [], 'projects': [], 'advising': [], 
+                'affiliations': [], 'coauthors': [], 'last_update': None,
+                'agent_logs': agent_logs,
+                'raw_content': full_text[:1000]
+            }
         except Exception as e:
-            return {'warnings': [f'Error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
+            return {'warnings': [f'Error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None, 'agent_logs': []}
     
     def _process_production(self, data: Dict[str, Any], cutoff_date: datetime) -> Dict[str, Any]:
         pub_by_type = defaultdict(int)
