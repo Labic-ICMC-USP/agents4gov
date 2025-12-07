@@ -112,6 +112,9 @@ class Tools:
                 warnings.append("Extraction failed")
                 return self._mock_profile(name, lattes_id, profile_url, warnings)
             
+            production = self._process_production(extracted_data, cutoff_date)
+            coauthors = production.pop('coauthors_extracted', []) or extracted_data.get('coauthors', [])
+            
             return {
                 'person': {
                     'name': name,
@@ -119,11 +122,12 @@ class Tools:
                     'profile_url': profile_url,
                     'last_update': extracted_data.get('last_update')
                 },
-                'production_5y': self._process_production(extracted_data, cutoff_date),
+                'production_5y': production,
                 'affiliations_5y': extracted_data.get('affiliations', []),
-                'coauthors_5y': extracted_data.get('coauthors', []),
+                'coauthors_5y': coauthors,
                 'warnings': warnings + extracted_data.get('warnings', []),
-                'evidence_urls': [profile_url]
+                'evidence_urls': [profile_url],
+                'agent_logs': extracted_data.get('agent_logs', [])
             }
         except Exception as e:
             warnings.append(f"Error: {str(e)}")
@@ -187,20 +191,23 @@ FINDING THE CORRECT CV:
 - If NO MORE RESULTS to check: return "profile_not_found" error and END task
 
 DATA TO EXTRACT (years {cutoff_year}-{current_year} only):
-- "Artigos completos publicados em periódicos" = publications
+- "Artigos completos publicados em periódicos" = publications (include DOI if available)
 - "Projetos de pesquisa" = projects  
 - "Orientações" = advising (PhD, Masters students)
+- "Atividades de participação em eventos/comitês" = activities
 - Institution/department from header
+- Coauthors from publications
 
 RETURN THIS JSON FORMAT:
 ```json
 {{
   "last_update": null,
-  "affiliations": [{{"institution": "Name", "department": "Dept"}}],
-  "publications": [{{"title": "Title", "year": 2024, "type": "journal", "venue": "Journal"}}],
-  "projects": [{{"title": "Project", "start_year": 2022, "status": "active"}}],
-  "advising": [{{"name": "Student", "level": "PhD", "year": 2023}}],
-  "coauthors": [],
+  "affiliations": [{{"institution": "Name", "department": "Dept", "lab_group": "Lab name if any"}}],
+  "publications": [{{"title": "Title", "year": 2024, "type": "journal", "venue": "Journal", "doi": "10.xxx/xxx", "coauthors": ["Name1", "Name2"]}}],
+  "projects": [{{"title": "Project", "start_year": 2022, "end_year": null, "status": "active", "members": ["Name1"]}}],
+  "advising": [{{"name": "Student", "level": "PhD", "year": 2023, "status": "concluded"}}],
+  "activities": [{{"name": "Committee/Event Name", "role": "Member", "year": 2023}}],
+  "coauthors": [{{"name": "Coauthor Name", "count": 3}}],
   "warnings": []
 }}
 ```
@@ -318,6 +325,31 @@ ERROR RESPONSES:
         except Exception as e:
             return {'warnings': [f'Error: {str(e)}'], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None, 'agent_logs': []}
     
+    def _deduplicate_publications(self, pubs: List[Dict]) -> List[Dict]:
+        seen = set()
+        unique = []
+        for pub in pubs:
+            doi = pub.get('doi')
+            if doi:
+                key = doi.lower()
+            else:
+                title = self._normalize_name(pub.get('title', ''))
+                year = pub.get('year', '')
+                key = f"{title}_{year}"
+            if key and key not in seen:
+                seen.add(key)
+                unique.append(pub)
+        return unique
+    
+    def _extract_coauthors(self, pubs: List[Dict]) -> List[Dict]:
+        coauthor_count = defaultdict(int)
+        for pub in pubs:
+            for coauthor in pub.get('coauthors', []):
+                if coauthor:
+                    norm_name = self._normalize_name(coauthor)
+                    coauthor_count[coauthor] += 1
+        return [{'name': name, 'count': count} for name, count in sorted(coauthor_count.items(), key=lambda x: -x[1])[:20]]
+    
     def _process_production(self, data: Dict[str, Any], cutoff_date: datetime) -> Dict[str, Any]:
         pub_by_type = defaultdict(int)
         filtered_pubs = []
@@ -327,6 +359,9 @@ ERROR RESPONSES:
             if self._in_window(year, cutoff_date):
                 filtered_pubs.append(pub)
                 pub_by_type[pub.get('type', 'other')] += 1
+        
+        filtered_pubs = self._deduplicate_publications(filtered_pubs)
+        coauthors = self._extract_coauthors(filtered_pubs)
         
         active_proj, concluded_proj = [], []
         for proj in data.get('projects', []):
@@ -338,11 +373,17 @@ ERROR RESPONSES:
             if self._in_window(self._parse_year(adv.get('year')), cutoff_date):
                 (ongoing_adv if adv.get('status') == 'ongoing' else concluded_adv).append(adv)
         
+        activities = []
+        for act in data.get('activities', []):
+            if self._in_window(self._parse_year(act.get('year')), cutoff_date):
+                activities.append(act)
+        
         return {
             'publications': {'total': len(filtered_pubs), 'by_type': dict(pub_by_type), 'top_items': filtered_pubs[:10]},
             'projects': {'total': len(active_proj) + len(concluded_proj), 'active': active_proj, 'concluded': concluded_proj},
             'advising': {'total': len(ongoing_adv) + len(concluded_adv), 'ongoing': ongoing_adv, 'concluded': concluded_adv},
-            'activities': []
+            'activities': activities,
+            'coauthors_extracted': coauthors
         }
     
     def _normalize_name(self, name: str) -> str:
@@ -450,29 +491,48 @@ ERROR RESPONSES:
     def _analyze_coi_pairwise(self, data: List[Dict], config: Dict[str, bool], cutoff: datetime) -> List[Dict]:
         pairs = []
         checks = {'R1': self._check_r1, 'R2': self._check_r2, 'R3': self._check_r3, 'R4': self._check_r4, 'R5': self._check_r5, 'R6': self._check_r6, 'R7': self._check_r7}
+        rule_descriptions = {
+            'R1': 'Co-authorship (shared publication)',
+            'R2': 'Advisor-advisee relationship',
+            'R3': 'Institutional overlap',
+            'R4': 'Project overlap',
+            'R5': 'Committee/event overlap',
+            'R6': 'Frequent co-authorship (3+ publications)',
+            'R7': 'Same lab/research group'
+        }
         
         for i in range(len(data)):
             for j in range(i + 1, len(data)):
                 a, b = data[i], data[j]
-                rules, evidence, levels = [], [], []
+                rules_detail = []
+                all_evidence = []
+                levels = []
                 
                 for rule, fn in checks.items():
                     if config.get(rule, True):
                         triggered, conf, ev = fn(a, b, cutoff)
                         if triggered:
-                            rules.append(rule)
-                            evidence.extend(ev)
+                            rules_detail.append({
+                                'rule': rule,
+                                'description': rule_descriptions[rule],
+                                'confidence': conf,
+                                'evidence': ev
+                            })
+                            all_evidence.extend(ev)
                             levels.append(conf)
                 
-                if rules:
+                if rules_detail:
                     pairs.append({
                         'a_lattes_id': a.get('person', {}).get('lattes_id'),
                         'b_lattes_id': b.get('person', {}).get('lattes_id'),
                         'a_name': a.get('person', {}).get('name'),
                         'b_name': b.get('person', {}).get('name'),
-                        'rules_triggered': rules,
+                        'a_profile_url': a.get('person', {}).get('profile_url'),
+                        'b_profile_url': b.get('person', {}).get('profile_url'),
+                        'rules_triggered': [r['rule'] for r in rules_detail],
+                        'rules_detail': rules_detail,
                         'confidence': 'high' if 'high' in levels else ('medium' if 'medium' in levels else 'low'),
-                        'evidence': evidence
+                        'evidence_summary': all_evidence
                     })
         return pairs
     
