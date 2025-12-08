@@ -66,19 +66,113 @@ curl https://lattes-navigator-api-production.up.railway.app/debug
 
 ### POST /analyze
 
-Analyze researchers for COI.
+Analyze researchers for COI (pairwise analysis).
 
 ```bash
 curl -X POST https://lattes-navigator-api-production.up.railway.app/analyze \
   -H "Content-Type: application/json" \
   -d '{
-    "reviewers": [
-      {"name": "Ricardo Marcacini", "lattes_id": "4003190744770195", "phd": "false"},
-      {"name": "Matheus", "lattes_id": "1458324546544936", "phd": "false"}
+    "researchers": [
+      {"name": "Ricardo Marcacini", "lattes_id": "3272611282260295"},
+      {"name": "Matheus Yasuo", "lattes_id": "6191612710855387"}
     ],
     "time_window": 5,
     "coi_rules": {"R1": true, "R2": true, "R3": true, "R4": true, "R5": true, "R6": true, "R7": true}
   }'
+```
+
+### POST /validate-committee
+
+Validate academic committee for conflicts of interest. Analyzes COI only between student and non-advisor committee members.
+
+**Request Body:**
+```json
+{
+  "student": {
+    "name": "Matheus Yasuo Ribeiro Utino",
+    "lattes_id": "6191612710855387"
+  },
+  "advisor": {
+    "name": "Ricardo Marcondes Marcacini",
+    "lattes_id": "3272611282260295"
+  },
+  "committee_members": [
+    {
+      "name": "Solange Oliveira Rezende",
+      "lattes_id": "8526960535874806",
+      "email": "solange@icmc.usp.br",
+      "institution": "ICMC-USP",
+      "role": "internal",
+      "is_president": false
+    },
+    {
+      "name": "Paulo Roberto Mann Marques Júnior",
+      "lattes_id": "3571577377652346",
+      "email": "paulomann@ufrj.br",
+      "institution": "UFRJ",
+      "role": "external",
+      "is_president": false
+    }
+  ],
+  "thesis_title": "Unstructured Text Mining in the Era of Large Language Models",
+  "committee_type": "qualification",
+  "time_window": 5
+}
+```
+
+**Test Valid Committee:**
+```bash
+curl -X POST https://lattes-navigator-api-production.up.railway.app/validate-committee \
+  -H "Content-Type: application/json" \
+  -d @tools/cnpq_lattes_navigator/examples/valid_committee.json
+```
+
+**Test Invalid Committee (with COI):**
+```bash
+curl -X POST https://lattes-navigator-api-production.up.railway.app/validate-committee \
+  -H "Content-Type: application/json" \
+  -d @tools/cnpq_lattes_navigator/examples/invalid_committee.json
+```
+
+**Response (Valid Committee):**
+```json
+{
+  "status": "valid",
+  "student": {...},
+  "advisor": {...},
+  "members_analysis": [
+    {
+      "member": {...},
+      "coi_detected": false,
+      "coi_details": []
+    }
+  ],
+  "conflicts": [],
+  "collection_log": [
+    "Extracting 1/5: Matheus Yasuo Ribeiro Utino (student)",
+    "Extracting 2/5: Ricardo Marcondes Marcacini (advisor)",
+    ...
+  ],
+  "summary": "Committee valid. Analyzed 4 members against student. No conflicts detected."
+}
+```
+
+**Response (Invalid Committee):**
+```json
+{
+  "status": "invalid",
+  "conflicts": [
+    {
+      "student_name": "Matheus Yasuo Ribeiro Utino",
+      "member_name": "Paulo Roberto Mann Marques Júnior",
+      "member_role": "external",
+      "rules_triggered": ["R1"],
+      "confidence": "high",
+      "evidence": ["Shared: Paper Title (2024)"]
+    }
+  ],
+  "summary": "Committee INVALID. 1 conflict(s) detected with: Paulo Roberto Mann Marques Júnior."
+}
 ```
 
 ## Test Procedures
@@ -116,6 +210,26 @@ curl -X POST https://lattes-navigator-api-production.up.railway.app/analyze \
   -H "Content-Type: application/json" \
   -d '{"researchers": [{"name": "Researcher A", "lattes_id": "ID_A"}, {"name": "Researcher B", "lattes_id": "ID_B"}], "time_window": 5}'
 ```
+
+### 5. Committee Validation Test
+
+**Test Valid Committee (no conflicts expected):**
+```bash
+curl -X POST https://lattes-navigator-api-production.up.railway.app/validate-committee \
+  -H "Content-Type: application/json" \
+  -d @tools/cnpq_lattes_navigator/examples/valid_committee.json
+```
+
+**Test Invalid Committee (conflict expected with Paulo Mann):**
+```bash
+curl -X POST https://lattes-navigator-api-production.up.railway.app/validate-committee \
+  -H "Content-Type: application/json" \
+  -d @tools/cnpq_lattes_navigator/examples/invalid_committee.json
+```
+
+**Expected Results:**
+- Valid committee: `"status": "valid"`, `"conflicts": []`
+- Invalid committee: `"status": "invalid"`, conflicts with Paulo Roberto Mann Marques Júnior
 
 ## COI Rules
 

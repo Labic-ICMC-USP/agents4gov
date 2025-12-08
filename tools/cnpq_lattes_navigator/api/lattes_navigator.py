@@ -91,7 +91,7 @@ class Tools:
         except Exception as e:
             return self._error_response('unexpected_error', str(e))
     
-    def _extract_researcher_profile(self, name: str, lattes_id: str, cutoff_date: datetime) -> Dict[str, Any]:
+    def _extract_researcher_profile(self, name: str, lattes_id: str, cutoff_date: datetime, is_student: bool = False) -> Dict[str, Any]:
         profile_url = f"http://lattes.cnpq.br/{lattes_id}"
         warnings = []
         
@@ -106,7 +106,7 @@ class Tools:
         time.sleep(self.rate_limit_delay)
         
         try:
-            extracted_data = self._run_browser_extraction(profile_url, name, lattes_id, cutoff_date)
+            extracted_data = self._run_browser_extraction(profile_url, name, lattes_id, cutoff_date, is_student)
             
             if extracted_data is None:
                 warnings.append("Extraction failed")
@@ -155,49 +155,61 @@ class Tools:
             'agent_logs': agent_logs or []
         }
     
-    def _run_browser_extraction(self, profile_url: str, name: str, lattes_id: str, cutoff_date: datetime) -> Optional[Dict[str, Any]]:
+    def _run_browser_extraction(self, profile_url: str, name: str, lattes_id: str, cutoff_date: datetime, is_student: bool = False) -> Optional[Dict[str, Any]]:
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                return loop.run_until_complete(self._async_extraction(profile_url, name, lattes_id, cutoff_date))
+                return loop.run_until_complete(self._async_extraction(profile_url, name, lattes_id, cutoff_date, is_student))
             finally:
                 loop.close()
         except Exception as e:
             return {'warnings': [str(e)], 'publications': [], 'projects': [], 'advising': [], 'affiliations': [], 'coauthors': [], 'last_update': None}
     
-    async def _async_extraction(self, profile_url: str, name: str, lattes_id: str, cutoff_date: datetime) -> Dict[str, Any]:
+    async def _async_extraction(self, profile_url: str, name: str, lattes_id: str, cutoff_date: datetime, is_student: bool = False) -> Dict[str, Any]:
         cutoff_year = cutoff_date.year
         current_year = datetime.now().year
         
         llm = ChatOpenAI(model=self.openai_model)
         
+        # Build checkbox step only for students
+        checkbox_step = ""
+        if is_student:
+            checkbox_step = """
+3. CHECK the checkbox with CSS selector "#buscarDemais" - REQUIRED for student search
+4. """
+        else:
+            checkbox_step = """
+3. """
+        
         task = f"""
-TASK: Extract academic data from Brazilian Lattes CV for researcher "{name}".
+TASK: Find and extract Lattes CV data for "{name}" (Lattes ID: {lattes_id}).
+
+TARGET LATTES ID: {lattes_id}
 
 NAVIGATION:
 1. Go to: https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
-2. Type "{name}" in the name search field (campo "Nome")
-3. You must not pass through this step without checking if checkbox with "Demais pesquisadores" label text is marked, if not, mark it.
-4. Click "Buscar" button
-5. Click on first result containing "{name.split()[0]}"
-6. When the result selected is opened, you must click on 'Abrir Currículo' button to open the full CV in a new tab.
+2. Type "{name}" in the search field
+{checkbox_step}CLICK button "#botaoBuscaFiltros"
+{"5" if is_student else "4"}. CLICK link containing "{name}" in results
+{"6" if is_student else "5"}. CLICK button "#idbtnabrircurriculo"
+{"7" if is_student else "6"}. VERIFY ID: Look at top of CV for "ID Lattes:" text followed by a number.
+   The ID must be exactly "{lattes_id}". 
+   If the ID shown is DIFFERENT, go BACK and try the NEXT result in the list.
 
-DATA EXTRACTION (years {cutoff_year}-{current_year}):
-After CV loads, scroll down and extract:
-- Institution from header
-- "Artigos completos publicados em periódicos" = publications
-- "Projetos de pesquisa" = projects
-- "Orientações" = student supervisions
-- Coauthors from publication entries
+CSS SELECTORS:
+- Checkbox: #buscarDemais (use CHECK action)
+- Search button: #botaoBuscaFiltros (use CLICK action)
+- Open CV button: #idbtnabrircurriculo (use CLICK action)
 
-CRITICAL: 
-- If you can see ANY CV content (name, institution, publications), extract it and return JSON with data
-- ONLY return captcha_blocked if page is COMPLETELY blocked and shows ONLY a CAPTCHA form with NO CV content
-- If some sections are empty, that's OK - return what you found
-- Ignore CAPTCHA widgets if CV content is visible
+ID LATTES LOCATION (in CV page):
+The ID appears at top of CV like: "ID Lattes: {lattes_id}"
+HTML: <li>ID Lattes: <span style="font-weight: bold; color: #326C99;">{lattes_id}</span></li>
 
-OUTPUT (always JSON):
+EXTRACT (years {cutoff_year}-{current_year}):
+- Institution, publications, projects, advising, coauthors
+
+OUTPUT JSON:
 ```json
 {{
   "last_update": null,
@@ -210,9 +222,9 @@ OUTPUT (always JSON):
 }}
 ```
 
-ONLY use these errors if NO DATA could be extracted:
-- {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+ERRORS (only if NO data found):
+- {{"warnings": ["profile_not_found"], ...}} if ID {lattes_id} not found in any result
+- {{"warnings": ["captcha_blocked"], ...}} if completely blocked
 """
         
         browser = None
@@ -238,7 +250,7 @@ ONLY use these errors if NO DATA could be extracted:
         
         for attempt in range(max_retries + 1):
             try:
-                history = await agent.run(max_steps=35) 
+                history = await agent.run(max_steps=50)  # Increased to allow iteration through search results 
                 break
             except Exception as retry_error:
                 last_error = retry_error
@@ -538,6 +550,140 @@ ONLY use these errors if NO DATA could be extracted:
     def _error_response(self, error_type: str, message: str) -> str:
         return json.dumps({'status': 'error', 'error_type': error_type, 'message': message, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False, indent=2)
     
+    def _collect_all_profiles(
+        self,
+        student: Dict[str, str],
+        advisor: Dict[str, str],
+        committee_members: List[Dict[str, Any]],
+        cutoff_date: datetime
+    ) -> Dict[str, Any]:
+        """
+        Browser Tool: Collect all profiles from Lattes platform.
+        Returns dict with student_data, advisor_data, and members_data.
+        
+        Note: The checkbox "Demais pesquisadores" is only needed for student search.
+        If student extraction fails, the entire collection is aborted.
+        """
+        collection_log = []
+        total = 2 + len([m for m in committee_members if m.get('lattes_id') != advisor.get('lattes_id') and m.get('role') != 'advisor'])
+        current = 0
+        
+        # Extract student FIRST (requires checkbox "Demais pesquisadores")
+        current += 1
+        collection_log.append(f"Extracting {current}/{total}: {student.get('name', 'Unknown')} (student - requires checkbox)")
+        student_data = self._extract_researcher_profile(
+            student.get('name', ''),
+            student.get('lattes_id', ''),
+            cutoff_date,
+            is_student=True  # This enables checkbox verification in the prompt
+        )
+        
+        # Check if student extraction failed - if so, abort the entire collection
+        student_warnings = student_data.get('warnings', [])
+        student_failed = any(w in student_warnings for w in ['profile_not_found', 'captcha_blocked', 'page_error', 'Extraction failed'])
+        
+        if student_failed:
+            collection_log.append(f"ABORTED: Student extraction failed. Warnings: {student_warnings}")
+            return {
+                'student_data': student_data,
+                'advisor_data': None,
+                'members_data': [],
+                'collection_log': collection_log,
+                'aborted': True,
+                'abort_reason': f"Student extraction failed: {student_warnings}"
+            }
+        
+        # Extract advisor (no checkbox needed - established researchers appear in default search)
+        current += 1
+        collection_log.append(f"Extracting {current}/{total}: {advisor.get('name', 'Unknown')} (advisor)")
+        advisor_data = self._extract_researcher_profile(
+            advisor.get('name', ''),
+            advisor.get('lattes_id', ''),
+            cutoff_date,
+            is_student=False
+        )
+        
+        # Extract committee members (excluding advisor) - no checkbox needed
+        members_data = []
+        for member in committee_members:
+            member_role = member.get('role', 'unknown')
+            if member_role == 'advisor' or member.get('lattes_id') == advisor.get('lattes_id'):
+                continue
+            
+            current += 1
+            collection_log.append(f"Extracting {current}/{total}: {member.get('name', 'Unknown')} ({member_role})")
+            member_data = self._extract_researcher_profile(
+                member.get('name', ''),
+                member.get('lattes_id', ''),
+                cutoff_date,
+                is_student=False
+            )
+            members_data.append({
+                'member_info': member,
+                'profile_data': member_data
+            })
+        
+        return {
+            'student_data': student_data,
+            'advisor_data': advisor_data,
+            'members_data': members_data,
+            'collection_log': collection_log,
+            'aborted': False
+        }
+    
+    def _judge_committee(
+        self,
+        student_data: Dict[str, Any],
+        members_data: List[Dict[str, Any]],
+        coi_config: Dict[str, bool],
+        cutoff_date: datetime
+    ) -> Dict[str, Any]:
+        """
+        Judge Tool: Analyze COI between student and each committee member.
+        No browser operations - pure data analysis.
+        """
+        members_analysis = []
+        conflicts = []
+        
+        for member_entry in members_data:
+            member_info = member_entry['member_info']
+            member_profile = member_entry['profile_data']
+            member_role = member_info.get('role', 'unknown')
+            
+            # Analyze COI between student and this member
+            coi_result = self._analyze_coi_pair(student_data, member_profile, coi_config, cutoff_date)
+            
+            member_analysis = {
+                'member': {
+                    'name': member_info.get('name'),
+                    'lattes_id': member_info.get('lattes_id'),
+                    'role': member_role,
+                    'institution': member_info.get('institution'),
+                    'profile_url': member_profile.get('person', {}).get('profile_url')
+                },
+                'extraction_warnings': member_profile.get('warnings', []),
+                'coi_detected': coi_result['has_coi'],
+                'coi_details': coi_result['details']
+            }
+            
+            members_analysis.append(member_analysis)
+            
+            if coi_result['has_coi']:
+                conflicts.append({
+                    'student_name': student_data.get('person', {}).get('name'),
+                    'member_name': member_info.get('name'),
+                    'member_role': member_role,
+                    'rules_triggered': coi_result['rules_triggered'],
+                    'confidence': coi_result['confidence'],
+                    'evidence': coi_result['evidence']
+                })
+        
+        return {
+            'members_analysis': members_analysis,
+            'conflicts': conflicts,
+            'has_conflicts': len(conflicts) > 0
+        }
+    
     def validate_committee(
         self,
         student: Dict[str, str],
@@ -548,6 +694,10 @@ ONLY use these errors if NO DATA could be extracted:
     ) -> str:
         """
         Validate academic committee for conflicts of interest.
+        
+        Architecture:
+        1. _collect_all_profiles() - Browser Tool: extracts all Lattes profiles
+        2. _judge_committee() - Judge Tool: analyzes COI (no browser)
         
         Analyzes COI only between student and non-advisor committee members.
         Advisor-student COI is expected and excluded from analysis.
@@ -570,67 +720,36 @@ ONLY use these errors if NO DATA could be extracted:
                 'advisor': None,
                 'members_analysis': [],
                 'conflicts': [],
+                'collection_log': [],
                 'summary': ''
             }
             
-            # Extract student profile
-            student_data = self._extract_researcher_profile(
-                student.get('name', ''),
-                student.get('lattes_id', ''),
+            # STEP 1: Browser Tool - Collect all profiles
+            collected = self._collect_all_profiles(student, advisor, committee_members, cutoff_date)
+            
+            results['student'] = collected['student_data']
+            results['advisor'] = collected.get('advisor_data')
+            results['collection_log'] = collected['collection_log']
+            
+            # Check if collection was aborted (student extraction failed)
+            if collected.get('aborted'):
+                results['status'] = 'error'
+                results['summary'] = f"Collection aborted: {collected.get('abort_reason', 'Student extraction failed')}"
+                return json.dumps(results, ensure_ascii=False, indent=2)
+            
+            # STEP 2: Judge Tool - Analyze COI (no browser operations)
+            judgment = self._judge_committee(
+                collected['student_data'],
+                collected['members_data'],
+                coi_config,
                 cutoff_date
             )
-            results['student'] = student_data
             
-            # Extract advisor profile (for reference, not analyzed for COI)
-            advisor_data = self._extract_researcher_profile(
-                advisor.get('name', ''),
-                advisor.get('lattes_id', ''),
-                cutoff_date
-            )
-            results['advisor'] = advisor_data
+            results['members_analysis'] = judgment['members_analysis']
+            results['conflicts'] = judgment['conflicts']
             
-            # Analyze each committee member against the student
-            for member in committee_members:
-                member_role = member.get('role', 'unknown')
-                
-                # Skip advisor in COI analysis (expected to have publications with student)
-                if member_role == 'advisor' or member.get('lattes_id') == advisor.get('lattes_id'):
-                    continue
-                
-                member_data = self._extract_researcher_profile(
-                    member.get('name', ''),
-                    member.get('lattes_id', ''),
-                    cutoff_date
-                )
-                
-                # Analyze COI between student and this member
-                coi_result = self._analyze_coi_pair(student_data, member_data, coi_config, cutoff_date)
-                
-                member_analysis = {
-                    'member': {
-                        'name': member.get('name'),
-                        'lattes_id': member.get('lattes_id'),
-                        'role': member_role,
-                        'institution': member.get('institution'),
-                        'profile_url': member_data.get('person', {}).get('profile_url')
-                    },
-                    'extraction_warnings': member_data.get('warnings', []),
-                    'coi_detected': coi_result['has_coi'],
-                    'coi_details': coi_result['details']
-                }
-                
-                results['members_analysis'].append(member_analysis)
-                
-                if coi_result['has_coi']:
-                    results['status'] = 'invalid'
-                    results['conflicts'].append({
-                        'student_name': student.get('name'),
-                        'member_name': member.get('name'),
-                        'member_role': member_role,
-                        'rules_triggered': coi_result['rules_triggered'],
-                        'confidence': coi_result['confidence'],
-                        'evidence': coi_result['evidence']
-                    })
+            if judgment['has_conflicts']:
+                results['status'] = 'invalid'
             
             # Generate summary
             num_members = len(results['members_analysis'])
