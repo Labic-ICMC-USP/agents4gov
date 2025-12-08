@@ -72,9 +72,9 @@ Analyze researchers for COI.
 curl -X POST https://lattes-navigator-api-production.up.railway.app/analyze \
   -H "Content-Type: application/json" \
   -d '{
-    "researchers": [
-      {"name": "Ricardo Marcacini", "lattes_id": "4003190744770195"},
-      {"name": "Solange Rezende", "lattes_id": "1458324546544936"}
+    "reviewers": [
+      {"name": "Ricardo Marcacini", "lattes_id": "4003190744770195", "phd": "false"},
+      {"name": "Matheus", "lattes_id": "1458324546544936", "phd": "false"}
     ],
     "time_window": 5,
     "coi_rules": {"R1": true, "R2": true, "R3": true, "R4": true, "R5": true, "R6": true, "R7": true}

@@ -112,6 +112,12 @@ class Tools:
                 warnings.append("Extraction failed")
                 return self._mock_profile(name, lattes_id, profile_url, warnings)
             
+            # Check for error warnings in extracted data
+            data_warnings = extracted_data.get('warnings', [])
+            if any(w in data_warnings for w in ['profile_not_found', 'captcha_blocked', 'page_error']):
+                warnings.extend(data_warnings)
+                return self._mock_profile(name, lattes_id, profile_url, warnings, extracted_data.get('agent_logs', []))
+            
             production = self._process_production(extracted_data, cutoff_date)
             coauthors = production.pop('coauthors_extracted', []) or extracted_data.get('coauthors', [])
             
@@ -125,7 +131,7 @@ class Tools:
                 'production_5y': production,
                 'affiliations_5y': extracted_data.get('affiliations', []),
                 'coauthors_5y': coauthors,
-                'warnings': warnings + extracted_data.get('warnings', []),
+                'warnings': warnings + data_warnings,
                 'evidence_urls': [profile_url],
                 'agent_logs': extracted_data.get('agent_logs', [])
             }
@@ -133,7 +139,7 @@ class Tools:
             warnings.append(f"Error: {str(e)}")
             return self._mock_profile(name, lattes_id, profile_url, warnings)
     
-    def _mock_profile(self, name: str, lattes_id: str, profile_url: str, warnings: List[str]) -> Dict[str, Any]:
+    def _mock_profile(self, name: str, lattes_id: str, profile_url: str, warnings: List[str], agent_logs: List[Dict] = None) -> Dict[str, Any]:
         return {
             'person': {'name': name, 'lattes_id': lattes_id, 'profile_url': profile_url, 'last_update': None},
             'production_5y': {
@@ -145,7 +151,8 @@ class Tools:
             'affiliations_5y': [],
             'coauthors_5y': [],
             'warnings': warnings,
-            'evidence_urls': [profile_url]
+            'evidence_urls': [profile_url],
+            'agent_logs': agent_logs or []
         }
     
     def _run_browser_extraction(self, profile_url: str, name: str, lattes_id: str, cutoff_date: datetime) -> Optional[Dict[str, Any]]:
@@ -165,103 +172,88 @@ class Tools:
         
         llm = ChatOpenAI(model=self.openai_model)
         
-        # Task with natural navigation flow to avoid CAPTCHA
         task = f"""
-TASK: Extract academic data from Brazilian Lattes CV for researcher "{name}" with Lattes ID "{lattes_id}".
+TASK: Extract academic data from Brazilian Lattes CV for researcher "{name}".
 
-CRITICAL RULES:
-- Do ONE action at a time, then WAIT for page to stabilize
-- After clicking ANY button/link, WAIT at least 5 seconds before next action
-- The page will reload after search - wait for new content to appear
-- Do NOT try to read the page immediately after clicking
-
-NAVIGATION STEPS (one action per step):
+NAVIGATION:
 1. Go to: https://buscatextual.cnpq.br/buscatextual/busca.do?metodo=apresentar
-2. Wait for search form to appear
-3. Type "{name}" in the "Nome" input field
-4. Click the "Buscar" button (has magnifying glass icon)
-5. Look at search results - find researcher name matching "{name}"
+2. Type "{name}" in the name search field (campo "Nome")
+3. Find and click the checkbox with id="buscarDemais" (label: "Demais pesquisadores")
+4. Click "Buscar" button
+5. Click on first result containing "{name.split()[0]}"
 
-FINDING THE CORRECT CV:
-- Click on a result that matches the name
-- Wait for CV page to load completely
-- Check if URL or page contains ID: {lattes_id}
-- If ID matches: extract data
-- If ID does NOT match: go back and try next result
-- If NO MORE RESULTS to check: return "profile_not_found" error and END task
+DATA EXTRACTION (years {cutoff_year}-{current_year}):
+After CV loads, scroll down and extract:
+- Institution from header
+- "Artigos completos publicados em periódicos" = publications
+- "Projetos de pesquisa" = projects
+- "Orientações" = student supervisions
+- Coauthors from publication entries
 
-DATA TO EXTRACT (years {cutoff_year}-{current_year} only):
-- "Artigos completos publicados em periódicos" = publications (include DOI if available)
-- "Projetos de pesquisa" = projects  
-- "Orientações" = advising (PhD, Masters students)
-- "Atividades de participação em eventos/comitês" = activities
-- Institution/department from header
-- Coauthors from publications
+CRITICAL: 
+- If you can see ANY CV content (name, institution, publications), extract it and return JSON with data
+- ONLY return captcha_blocked if page is COMPLETELY blocked and shows ONLY a CAPTCHA form with NO CV content
+- If some sections are empty, that's OK - return what you found
+- Ignore CAPTCHA widgets if CV content is visible
 
-RETURN THIS JSON FORMAT:
+OUTPUT (always JSON):
 ```json
 {{
   "last_update": null,
-  "affiliations": [{{"institution": "Name", "department": "Dept", "lab_group": "Lab name if any"}}],
-  "publications": [{{"title": "Title", "year": 2024, "type": "journal", "venue": "Journal", "doi": "10.xxx/xxx", "coauthors": ["Name1", "Name2"]}}],
-  "projects": [{{"title": "Project", "start_year": 2022, "end_year": null, "status": "active", "members": ["Name1"]}}],
-  "advising": [{{"name": "Student", "level": "PhD", "year": 2023, "status": "concluded"}}],
-  "activities": [{{"name": "Committee/Event Name", "role": "Member", "year": 2023}}],
-  "coauthors": [{{"name": "Coauthor Name", "count": 3}}],
+  "affiliations": [{{"institution": "...", "department": "..."}}],
+  "publications": [{{"title": "...", "year": 2024, "type": "journal", "coauthors": ["..."]}}],
+  "projects": [{{"title": "...", "start_year": 2022}}],
+  "advising": [{{"name": "...", "level": "PhD", "year": 2023}}],
+  "coauthors": [{{"name": "...", "count": 1}}],
   "warnings": []
 }}
 ```
 
-ERROR RESPONSES:
-- Captcha: {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- Not found: {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
-- Error: {{"warnings": ["page_error"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+ONLY use these errors if NO DATA could be extracted:
+- {{"warnings": ["captcha_blocked"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
+- {{"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}}
 """
         
         # Create browser with cloud stealth mode if enabled
         browser = None
         if self.use_cloud_browser:
             browser = Browser(
-                cloud_proxy_country_code='us',  # US proxy for stealth
+                use_cloud=True,  # CRITICAL: Enable cloud browser
+                cloud_proxy_country_code='br',  # Brazil proxy for CNPq
                 cloud_timeout=15,  # 15 min session (free tier max)
-                wait_between_actions=2.0,  # Wait 2s between actions
-                wait_for_network_idle_page_load_time=3.0,  # Wait for network idle
-                minimum_wait_page_load_time=2.0,  # Min wait after navigation
+                wait_between_actions=3.0, 
+                wait_for_network_idle_page_load_time=5.0,
+                minimum_wait_page_load_time=3.0,
             )
         
-        # Create agent with settings optimized for page transitions
-        # max_actions_per_step=1 prevents race conditions when page navigates
         agent = Agent(
             task=task, 
             llm=llm,
             browser=browser,
-            max_actions_per_step=1  # One action at a time to handle page transitions
+            max_actions_per_step=1
         )
         
-        # Retry logic
-        max_retries = 2
+        max_retries = 1
         last_error = None
         
         for attempt in range(max_retries + 1):
             try:
-                history = await agent.run(max_steps=50)  # More steps for single-action mode
-                break  # Success, exit retry loop
+                history = await agent.run(max_steps=35) 
+                break
             except Exception as retry_error:
                 last_error = retry_error
                 if attempt < max_retries:
-                    await asyncio.sleep(3)  # Wait before retry
+                    await asyncio.sleep(5)
                     continue
                 else:
                     return {
                         'warnings': [f'Failed after {max_retries + 1} attempts: {str(last_error)}'],
                         'publications': [], 'projects': [], 'advising': [],
                         'affiliations': [], 'coauthors': [], 'last_update': None,
-                        'agent_logs': []
+                        'agent_logs': [{'error': str(last_error)}]
                     }
         
         try:
-            
-            # Extract agent logs
             agent_logs = []
             all_content = []
             
@@ -277,14 +269,11 @@ ERROR RESPONSES:
                         step_log['error'] = str(r.error)
                     agent_logs.append(step_log)
             
-            # Also check final_result if available
             if hasattr(history, 'final_result') and history.final_result:
                 all_content.append(str(history.final_result))
             
-            # Combine all content
             full_text = '\n'.join(all_content)
             
-            # Try to find JSON block
             json_block = re.search(r'```json\s*([\s\S]*?)\s*```', full_text)
             if json_block:
                 try:
@@ -294,7 +283,6 @@ ERROR RESPONSES:
                 except json.JSONDecodeError:
                     pass
             
-            # Try to find raw JSON object with warnings
             json_match = re.search(r'\{[^{}]*"warnings"[^{}]*\}', full_text)
             if json_match:
                 try:
@@ -304,7 +292,6 @@ ERROR RESPONSES:
                 except json.JSONDecodeError:
                     pass
             
-            # Try any JSON object
             json_match = re.search(r'\{[\s\S]*\}', full_text)
             if json_match:
                 try:
@@ -314,7 +301,6 @@ ERROR RESPONSES:
                 except json.JSONDecodeError:
                     pass
             
-            # Return debug info with logs
             return {
                 'warnings': [f'No JSON in response'],
                 'publications': [], 'projects': [], 'advising': [], 
@@ -551,3 +537,163 @@ ERROR RESPONSES:
     
     def _error_response(self, error_type: str, message: str) -> str:
         return json.dumps({'status': 'error', 'error_type': error_type, 'message': message, 'timestamp': datetime.now().isoformat()}, ensure_ascii=False, indent=2)
+    
+    def validate_committee(
+        self,
+        student: Dict[str, str],
+        advisor: Dict[str, str],
+        committee_members: List[Dict[str, Any]],
+        time_window: int = 5,
+        coi_rules_config: Dict[str, bool] = None
+    ) -> str:
+        """
+        Validate academic committee for conflicts of interest.
+        
+        Analyzes COI only between student and non-advisor committee members.
+        Advisor-student COI is expected and excluded from analysis.
+        Member-member COI is not relevant for committee validation.
+        """
+        try:
+            coi_config = coi_rules_config or {"R1": True, "R2": True, "R3": True, "R4": True, "R5": True, "R6": True, "R7": True}
+            cutoff_date = datetime.now() - timedelta(days=time_window * 365)
+            
+            results = {
+                'status': 'valid',
+                'execution_metadata': {
+                    'execution_date': datetime.now().isoformat(),
+                    'time_window_years': time_window,
+                    'cutoff_date': cutoff_date.isoformat(),
+                    'coi_rules_active': coi_config,
+                    'browser_use_available': self.browser_available
+                },
+                'student': None,
+                'advisor': None,
+                'members_analysis': [],
+                'conflicts': [],
+                'summary': ''
+            }
+            
+            # Extract student profile
+            student_data = self._extract_researcher_profile(
+                student.get('name', ''),
+                student.get('lattes_id', ''),
+                cutoff_date
+            )
+            results['student'] = student_data
+            
+            # Extract advisor profile (for reference, not analyzed for COI)
+            advisor_data = self._extract_researcher_profile(
+                advisor.get('name', ''),
+                advisor.get('lattes_id', ''),
+                cutoff_date
+            )
+            results['advisor'] = advisor_data
+            
+            # Analyze each committee member against the student
+            for member in committee_members:
+                member_role = member.get('role', 'unknown')
+                
+                # Skip advisor in COI analysis (expected to have publications with student)
+                if member_role == 'advisor' or member.get('lattes_id') == advisor.get('lattes_id'):
+                    continue
+                
+                member_data = self._extract_researcher_profile(
+                    member.get('name', ''),
+                    member.get('lattes_id', ''),
+                    cutoff_date
+                )
+                
+                # Analyze COI between student and this member
+                coi_result = self._analyze_coi_pair(student_data, member_data, coi_config, cutoff_date)
+                
+                member_analysis = {
+                    'member': {
+                        'name': member.get('name'),
+                        'lattes_id': member.get('lattes_id'),
+                        'role': member_role,
+                        'institution': member.get('institution'),
+                        'profile_url': member_data.get('person', {}).get('profile_url')
+                    },
+                    'extraction_warnings': member_data.get('warnings', []),
+                    'coi_detected': coi_result['has_coi'],
+                    'coi_details': coi_result['details']
+                }
+                
+                results['members_analysis'].append(member_analysis)
+                
+                if coi_result['has_coi']:
+                    results['status'] = 'invalid'
+                    results['conflicts'].append({
+                        'student_name': student.get('name'),
+                        'member_name': member.get('name'),
+                        'member_role': member_role,
+                        'rules_triggered': coi_result['rules_triggered'],
+                        'confidence': coi_result['confidence'],
+                        'evidence': coi_result['evidence']
+                    })
+            
+            # Generate summary
+            num_members = len(results['members_analysis'])
+            num_conflicts = len(results['conflicts'])
+            
+            if num_conflicts == 0:
+                results['summary'] = f"Committee valid. Analyzed {num_members} members against student. No conflicts detected."
+            else:
+                conflict_names = [c['member_name'] for c in results['conflicts']]
+                results['summary'] = f"Committee INVALID. {num_conflicts} conflict(s) detected with: {', '.join(conflict_names)}."
+            
+            return json.dumps(results, ensure_ascii=False, indent=2)
+            
+        except Exception as e:
+            return self._error_response('unexpected_error', str(e))
+    
+    def _analyze_coi_pair(self, a: Dict, b: Dict, config: Dict[str, bool], cutoff: datetime) -> Dict[str, Any]:
+        """Analyze COI between two researchers (student vs member)."""
+        checks = {
+            'R1': self._check_r1,
+            'R2': self._check_r2,
+            'R3': self._check_r3,
+            'R4': self._check_r4,
+            'R5': self._check_r5,
+            'R6': self._check_r6,
+            'R7': self._check_r7
+        }
+        rule_descriptions = {
+            'R1': 'Co-authorship (shared publication)',
+            'R2': 'Advisor-advisee relationship',
+            'R3': 'Institutional overlap',
+            'R4': 'Project overlap',
+            'R5': 'Committee/event overlap',
+            'R6': 'Frequent co-authorship (3+ publications)',
+            'R7': 'Same lab/research group'
+        }
+        
+        details = []
+        all_evidence = []
+        rules_triggered = []
+        levels = []
+        
+        for rule, fn in checks.items():
+            if config.get(rule, True):
+                triggered, conf, ev = fn(a, b, cutoff)
+                if triggered:
+                    rules_triggered.append(rule)
+                    details.append({
+                        'rule': rule,
+                        'description': rule_descriptions[rule],
+                        'confidence': conf,
+                        'evidence': ev
+                    })
+                    all_evidence.extend(ev)
+                    levels.append(conf)
+        
+        has_coi = len(rules_triggered) > 0
+        confidence = 'high' if 'high' in levels else ('medium' if 'medium' in levels else 'low')
+        
+        return {
+            'has_coi': has_coi,
+            'rules_triggered': rules_triggered,
+            'confidence': confidence if has_coi else None,
+            'evidence': all_evidence,
+            'details': details
+        }
