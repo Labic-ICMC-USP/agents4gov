@@ -15,6 +15,9 @@ This directory contains tools that can be used by agents in the Agents4Gov frame
 ### SEIR Model Simulator
 - **[seir_model_simulator/main.py](seir_model_simulator/README.md)** - Run configurable SEIR epidemiological simulations with exposed compartments, key metrics, summarized time series, and optional plots
 
+### Risk Matrix Generator
+- **[risk_matrix_generator/main.py](risk_matrix_generator/README.md)** - Generate probability × severity risk matrices from datasets, with optional base64-encoded SVG output and top critical events
+
 ## How to Use Tools in Open WebUI
 
 ### Method 1: Import via UI
