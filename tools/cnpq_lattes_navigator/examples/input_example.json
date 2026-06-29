@@ -1,0 +1,28 @@
+{
+  "description": "Example input for CNPq/Lattes Navigator tool",
+  "researchers": [
+    {
+      "name": "Ana Silva Santos",
+      "lattes_id": "1234567890123456"
+    },
+    {
+      "name": "Carlos Oliveira Lima",
+      "lattes_id": "2345678901234567"
+    },
+    {
+      "name": "Beatriz Costa Ferreira",
+      "lattes_id": "3456789012345678"
+    }
+  ],
+  "time_window": 5,
+  "coi_rules_config": {
+    "R1": true,
+    "R2": true,
+    "R3": true,
+    "R4": true,
+    "R5": true,
+    "R6": true,
+    "R7": true
+  }
+}
+

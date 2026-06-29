@@ -1,0 +1,111 @@
+WARNING  [cdp_use.client] Received duplicate response for request 691 - ignoring
+INFO     [Agent] 
+INFO     [Agent] 📍 Step 19:
+WARNING  [tools] ⚠️ Element index 17440 not available - page may have changed. Try refreshing browser state.
+INFO     [Agent]   👍 Eval: Successfully clicked the 'Buscar' button again after re-entering the name. Verdict: Success.
+INFO     [Agent]   🧠 Memory: Currently on the CNPq search page after initiating a new search for Paulo Roberto Mann Marques Junior. I have inputted 'Paulo Roberto Mann Marques Junior' again into the search field and am ready to check for additional results.
+INFO     [Agent]   🎯 Next goal: Click the 'Buscar' button to execute the new search for Paulo Roberto Mann Marques Junior.
+INFO     [Agent]   ▶️   click: index: 17440, coordinate_x: None, coordinate_y: None, force: False
+WARNING  [bubus] ⚠️ EventBus_08319417🟢(⏳ 0 | ▶️ 2 | ✅ 48 ➡️ 31 👂) handler browser_use.browser.watchdog_base.DOMWatchdog.on_BrowserStateRequestEvent() has been running for >15s on event. Possible slow processing or deadlock.
+(handler could be trying to await its own result or could be blocked by another async task).
+browser_use.browser.watchdog_base.DOMWatchdog.on_BrowserStateRequestEvent(?▶ BrowserStateRequestEvent#8312 🏃)
+WARNING  [bubus] ⚠️ EventBus_08319417🟢(⏳ 0 | ▶️ 2 | ✅ 48 ➡️ 31 👂) handler browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent() has been running for >15s on event. Possible slow processing or deadlock.
+(handler could be trying to await its own result or could be blocked by another async task).
+browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent(?▶ ScreenshotEvent#2d0e 🏃)
+WARNING  [bubus]    ➡️ browser_use.browser.watchdog_base.DOMWatchdog.on_BrowserStateRequestEvent(#8312) ⏳ 15s/30s  
+WARNING  [bubus]       📣 ScreenshotEvent#2d0e                                          15s
+WARNING  [bubus]          ⏰ browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent(#2d0e) ⌛️ 15s/15s   ⬅️ TIMEOUT HERE ⏰
+WARNING  [bubus] 
+WARNING  [bubus] ================================================================================
+================================================================================
+WARNING  [bubus] ⏱️  TIMEOUT ERROR - Handling took more than 15.0s for EventBus_08319417.browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent(?▶ ScreenshotEvent#2d0e ✅)
+WARNING  [bubus] ================================================================================
+WARNING  [bubus] 📣 BrowserStateRequestEvent#8312                                       15s
+WARNING  [bubus]    ☑️ browser_use.browser.watchdog_base.DownloadsWatchdog.on_BrowserStateRequestEvent(#8312)     0s/30s   ✓
+WARNING  [bubus]       📣 NavigationCompleteEvent#27fa                                  15s
+WARNING  [bubus]          ☑️ browser_use.browser.watchdog_base.DownloadsWatchdog.on_NavigationCompleteEvent(#27fa)     0s/30s   ✓
+WARNING  [bubus]          ☑️ browser_use.browser.watchdog_base.SecurityWatchdog.on_NavigationCompleteEvent(#27fa)     0s/30s   ✓
+WARNING  [BrowserSession] 📸 Clean screenshot timed out after 6 seconds - no handler registered or slow page?
+ERROR    [BrowserSession] Exception in background task [capture_screenshot]: TimeoutError: Event handler browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent#1520(?▶ ScreenshotEvent#2d0e 🏃) timed out after 15.0s
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/asyncio/tasks.py", line 500, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/browser_use/browser/watchdog_base.py", line 108, in unique_handler
+    result = await actual_handler(event)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/browser_use/observability.py", line 73, in async_wrapper
+    return await func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/browser_use/browser/watchdogs/screenshot_watchdog.py", line 60, in on_ScreenshotEvent
+    result = await cdp_session.cdp_client.send.Page.captureScreenshot(params=params, session_id=cdp_session.session_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/cdp_use/cdp/page/library.py", line 123, in captureScreenshot
+    return cast("CaptureScreenshotReturns", await self._client.send_raw(
+The above exception was the direct cause of the following exception:
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/cdp_use/client.py", line 398, in send_raw
+  File "/usr/local/lib/python3.11/site-packages/browser_use/utils.py", line 363, in wrapper
+    return await future
+    result = await func(*args, **kwargs)
+           ^^^^^^^^^^^^
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/bubus/service.py", line 1128, in execute_handler
+    result_value: Any = await asyncio.wait_for(handler_task, timeout=event_result.timeout)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/tasks.py", line 502, in wait_for
+    raise exceptions.TimeoutError() from exc
+TimeoutError
+  File "/usr/local/lib/python3.11/site-packages/bubus/models.py", line 490, in event_results_filtered
+    await event_result
+  File "/usr/local/lib/python3.11/site-packages/bubus/models.py", line 889, in wait_for_handler_to_complete_and_return_result
+    raise self.error if isinstance(self.error, BaseException) else Exception(self.error)  # pyright: ignore[reportUnnecessaryIsInstance]
+  File "/usr/local/lib/python3.11/site-packages/browser_use/observability.py", line 73, in async_wrapper
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/bubus/service.py", line 1070, in _execute_handlers
+    return await func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/browser_use/browser/watchdogs/dom_watchdog.py", line 696, in _capture_clean_screenshot
+    screenshot_b64 = await screenshot_event.event_result(raise_if_any=True, raise_if_none=True)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/bubus/models.py", line 574, in event_result
+    valid_results = await self.event_results_filtered(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/bubus/models.py", line 516, in event_results_filtered
+    raise original_error
+    await self.execute_handler(event, handler, timeout=timeout)
+  File "/usr/local/lib/python3.11/site-packages/bubus/service.py", line 1194, in execute_handler
+    raise handler_timeout_error from e
+TimeoutError: Event handler browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent#1520(?▶ ScreenshotEvent#2d0e 🏃) timed out after 15.0s
+WARNING  [BrowserSession] 🔍 DOMWatchdog.on_BrowserStateRequestEvent: Clean screenshot failed: Event handler browser_use.browser.watchdog_base.ScreenshotWatchdog.on_ScreenshotEvent#1520(?▶ ScreenshotEvent#2d0e 🏃) timed out after 15.0s
+INFO     [Agent] 
+INFO     [Agent] 📍 Step 20:
+INFO     [Agent]   👍 Eval: The task of extracting academic data was not completed successfully as the specified Lattes ID was not found. Verdict: Failure.
+INFO     [Agent]   🧠 Memory: I navigated through the CNPq search page and attempted to find the Lattes CV for Paulo Roberto Mann Marques Junior multiple times but could not locate the specified Lattes ID. The search yielded no matching results, leading to a conclusion of 'profile_not_found'.
+INFO     [Agent]   🎯 Next goal: Prepare to call done with a 'profile_not_found' error response.
+INFO     [Agent]   ▶️   done: text: {"warnings": ["profile_not_found"], "publications": [], "projects": [], "advising": [], "affiliations": [], "coauthors": [], "last_update": null}, success: False, files_to_display: None
+INFO     [Agent] 
+📄  Final Result: 
+INFO     [Agent] 
+⚖️  Judge Verdict: ❌ FAIL
+   Failure Reason: The agent could not locate a profile matching the provided Lattes ID after searching multiple times, resulting in a 'profile_not_found' warning. Additionally, there were instances of clicking on unavailable elements and encountering a rate limit error, which hindered progress. These issues contributed to an incomplete task outcome.
+   The agent attempted to extract academic data for Paulo Roberto Mann Marques Junior but ultimately returned a 'profile_not_found' warning. The agent followed the navigation steps correctly, including waiting for the page to stabilize after each action. However, it failed to find a matching CV with the specified Lattes ID. The agent's trajectory included unnecessary repeated clicks and an error due to rate limiting, which indicates potential inefficiencies in tool usage. Overall, while the agent executed the steps as instructed, it did not achieve the task's goal of retrieving the required data.
+INFO     [Agent] 
+INFO     [Agent] Did the Agent not work as expected? Let us fix this!
+INFO     [Agent]    Open a short issue on GitHub: https://github.com/browser-use/browser-use/issues
+INFO     [cloud] 🌤️ Stopping cloud browser session: 622efe0a-e249-4c3f-86a8-a366fefffda1
+WARNING  [BrowserSession] [SessionManager] Agent focus target 166C6017... detached! Current focus: None (already cleared). Auto-recovering by switching to another target...
+WARNING  [BrowserSession] [SessionManager] No tabs remain! Creating new tab for agent...
+ERROR    [BrowserSession] [SessionManager] ❌ Error during agent_focus recovery: RuntimeError: {'code': -32000, 'message': 'Failed to open new tab - no browser is open'}
+INFO     [BrowserSession] 📢 on_BrowserStopEvent - Calling reset() (force=True, keep_alive=None)
+INFO     [BrowserSession] [SessionManager] Cleared all owned data (targets, sessions, mappings)
+INFO     [BrowserSession] ✅ Browser session reset complete
+WARNING  [BrowserSession] Cannot navigate - browser not connected
+WARNING  [BrowserSession] Cannot navigate - browser not connected
+WARNING  [BrowserSession] Cannot navigate - browser not connected
+INFO     [BrowserSession] ✅ Browser session reset complete
+INFO:     100.64.0.5:24514 - "POST /analyze HTTP/1.1" 200 OK

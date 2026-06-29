@@ -1,0 +1,497 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CNPq/Lattes COI Analysis Output Schema",
+    "description": "Schema for the output of CNPq/Lattes Navigator tool - Conflict of Interest detection and 5-year production summary",
+    "type": "object",
+    "properties": {
+        "status": {
+            "type": "string",
+            "enum": [
+                "success",
+                "error"
+            ],
+            "description": "Status of the analysis execution"
+        },
+        "execution_metadata": {
+            "type": "object",
+            "description": "Metadata about the analysis execution",
+            "properties": {
+                "execution_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp of when the analysis was run"
+                },
+                "time_window_years": {
+                    "type": "integer",
+                    "description": "Number of years analyzed"
+                },
+                "cutoff_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 date threshold for filtering data"
+                },
+                "num_researchers": {
+                    "type": "integer",
+                    "description": "Total number of researchers analyzed"
+                },
+                "coi_rules_active": {
+                    "type": "object",
+                    "description": "Configuration of which COI rules were enabled",
+                    "properties": {
+                        "R1": {
+                            "type": "boolean",
+                            "description": "Co-authorship (≥1 publication)"
+                        },
+                        "R2": {
+                            "type": "boolean",
+                            "description": "Advisor-advisee relationship"
+                        },
+                        "R3": {
+                            "type": "boolean",
+                            "description": "Institutional overlap"
+                        },
+                        "R4": {
+                            "type": "boolean",
+                            "description": "Project team overlap"
+                        },
+                        "R5": {
+                            "type": "boolean",
+                            "description": "Committee/board/event overlap"
+                        },
+                        "R6": {
+                            "type": "boolean",
+                            "description": "Frequent co-authorship (≥3 publications)"
+                        },
+                        "R7": {
+                            "type": "boolean",
+                            "description": "Strong institutional proximity (same lab/group)"
+                        }
+                    }
+                }
+            },
+            "required": [
+                "execution_date",
+                "time_window_years",
+                "num_researchers"
+            ]
+        },
+        "researchers": {
+            "type": "array",
+            "description": "Array of researcher profiles with production data",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Researcher name"
+                            },
+                            "lattes_id": {
+                                "type": "string",
+                                "description": "CNPq Lattes ID"
+                            },
+                            "profile_url": {
+                                "type": "string",
+                                "format": "uri",
+                                "description": "URL to public Lattes profile"
+                            },
+                            "last_update": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "description": "Last profile update date if available"
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "lattes_id",
+                            "profile_url"
+                        ]
+                    },
+                    "production_5y": {
+                        "type": "object",
+                        "description": "Academic production within the time window",
+                        "properties": {
+                            "publications": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "description": "Total number of publications"
+                                    },
+                                    "by_type": {
+                                        "type": "object",
+                                        "description": "Count of publications by type",
+                                        "additionalProperties": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "top_items": {
+                                        "type": "array",
+                                        "description": "Top/most recent publications",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "year": {
+                                                    "type": "integer"
+                                                },
+                                                "venue": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                },
+                                                "authors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "projects": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "description": "Total number of projects"
+                                    },
+                                    "active": {
+                                        "type": "array",
+                                        "description": "Currently active projects",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "role": {
+                                                    "type": "string"
+                                                },
+                                                "sponsor": {
+                                                    "type": "string"
+                                                },
+                                                "start_year": {
+                                                    "type": "integer"
+                                                },
+                                                "end_year": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "concluded": {
+                                        "type": "array",
+                                        "description": "Concluded projects",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "role": {
+                                                    "type": "string"
+                                                },
+                                                "sponsor": {
+                                                    "type": "string"
+                                                },
+                                                "start_year": {
+                                                    "type": "integer"
+                                                },
+                                                "end_year": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "advising": {
+                                "type": "object",
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "description": "Total advisees"
+                                    },
+                                    "ongoing": {
+                                        "type": "array",
+                                        "description": "Ongoing advising",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "level": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "MS",
+                                                        "PhD",
+                                                        "Postdoc",
+                                                        "IC"
+                                                    ]
+                                                },
+                                                "start_year": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "concluded": {
+                                        "type": "array",
+                                        "description": "Concluded advising",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "level": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "MS",
+                                                        "PhD",
+                                                        "Postdoc",
+                                                        "IC"
+                                                    ]
+                                                },
+                                                "year": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "activities": {
+                                "type": "array",
+                                "description": "Committee, board, and event participation",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "role": {
+                                            "type": "string"
+                                        },
+                                        "year": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "affiliations_5y": {
+                        "type": "array",
+                        "description": "Institutional affiliations within time window",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "institution": {
+                                    "type": "string"
+                                },
+                                "department": {
+                                    "type": "string"
+                                },
+                                "lab_group": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "start_year": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ]
+                                },
+                                "end_year": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "coauthors_5y": {
+                        "type": "array",
+                        "description": "Unique coauthors with publication counts",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "description": "Number of co-authored publications"
+                                }
+                            }
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "description": "Warnings or issues during data extraction",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "evidence_urls": {
+                        "type": "array",
+                        "description": "URLs used as evidence for extracted data",
+                        "items": {
+                            "type": "string",
+                            "format": "uri"
+                        }
+                    }
+                },
+                "required": [
+                    "person",
+                    "production_5y",
+                    "affiliations_5y",
+                    "coauthors_5y",
+                    "warnings",
+                    "evidence_urls"
+                ]
+            }
+        },
+        "coi_matrix": {
+            "type": "object",
+            "description": "Pairwise conflict of interest analysis",
+            "properties": {
+                "pairs": {
+                    "type": "array",
+                    "description": "Detected COI pairs",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "a_lattes_id": {
+                                "type": "string",
+                                "description": "Lattes ID of first researcher"
+                            },
+                            "b_lattes_id": {
+                                "type": "string",
+                                "description": "Lattes ID of second researcher"
+                            },
+                            "a_name": {
+                                "type": "string",
+                                "description": "Name of first researcher"
+                            },
+                            "b_name": {
+                                "type": "string",
+                                "description": "Name of second researcher"
+                            },
+                            "rules_triggered": {
+                                "type": "array",
+                                "description": "List of COI rules that were triggered",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "R1",
+                                        "R2",
+                                        "R3",
+                                        "R4",
+                                        "R5",
+                                        "R6",
+                                        "R7"
+                                    ]
+                                }
+                            },
+                            "confidence": {
+                                "type": "string",
+                                "enum": [
+                                    "high",
+                                    "medium",
+                                    "low"
+                                ],
+                                "description": "Overall confidence level for the COI detection"
+                            },
+                            "evidence": {
+                                "type": "array",
+                                "description": "Evidence supporting the COI detection",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "a_lattes_id",
+                            "b_lattes_id",
+                            "a_name",
+                            "b_name",
+                            "rules_triggered",
+                            "confidence",
+                            "evidence"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "pairs"
+            ]
+        },
+        "summary_text": {
+            "type": "string",
+            "description": "Human-readable summary of the analysis results"
+        },
+        "error_type": {
+            "type": "string",
+            "description": "Type of error if status is 'error'"
+        },
+        "message": {
+            "type": "string",
+            "description": "Error message if status is 'error'"
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of error if status is 'error'"
+        }
+    },
+    "required": [
+        "status"
+    ],
+    "oneOf": [
+        {
+            "properties": {
+                "status": {
+                    "const": "success"
+                }
+            },
+            "required": [
+                "status",
+                "execution_metadata",
+                "researchers",
+                "coi_matrix",
+                "summary_text"
+            ]
+        },
+        {
+            "properties": {
+                "status": {
+                    "const": "error"
+                }
+            },
+            "required": [
+                "status",
+                "error_type",
+                "message"
+            ]
+        }
+    ]
+}

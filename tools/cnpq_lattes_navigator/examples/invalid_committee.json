@@ -1,0 +1,63 @@
+{
+    "student": {
+        "name": "Matheus Yasuo Ribeiro Utino",
+        "lattes_id": "6191612710855387"
+    },
+    "advisor": {
+        "name": "Ricardo Marcondes Marcacini",
+        "lattes_id": "3272611282260295"
+    },
+    "committee_members": [
+        {
+            "name": "Ricardo Marcondes Marcacini",
+            "lattes_id": "3272611282260295",
+            "email": "ricardo.marcacini@icmc.usp.br",
+            "institution": "ICMC-USP",
+            "role": "advisor",
+            "is_president": true
+        },
+        {
+            "name": "Solange Oliveira Rezende",
+            "lattes_id": "8526960535874806",
+            "email": "solange@icmc.usp.br",
+            "institution": "ICMC-USP",
+            "role": "internal",
+            "is_president": false
+        },
+        {
+            "name": "Paulo Roberto Mann Marques Júnior",
+            "lattes_id": "3571577377652346",
+            "email": "paulomann@ufrj.br",
+            "institution": "UFRJ",
+            "role": "external",
+            "is_president": false
+        },
+        {
+            "name": "Ricardo Cerri",
+            "lattes_id": "6266519868438512",
+            "email": "cerri@icmc.usp.br",
+            "institution": "ICMC-USP",
+            "role": "substitute",
+            "is_president": false
+        },
+        {
+            "name": "Renato Tinós",
+            "lattes_id": "1273134370963830",
+            "email": "rtinos@ffclrp.usp.br",
+            "institution": "FFCLRP",
+            "role": "substitute",
+            "is_president": false
+        },
+        {
+            "name": "Jônata Tyska Carvalho",
+            "lattes_id": "9494364044256921",
+            "email": "jonata.tyska@ufsc.br",
+            "institution": "UFSC",
+            "role": "substitute",
+            "is_president": false
+        }
+    ],
+    "thesis_title": "Unstructured Text Mining in the Era of Large Language Models",
+    "committee_type": "qualification",
+    "time_window": 5
+}
